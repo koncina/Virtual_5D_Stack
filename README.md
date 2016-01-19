@@ -6,7 +6,7 @@
 
 ## Usage
 
-The plugin expects a `.v5s` file which is actually a text file containing two lines (the dimension $t$ which is limited to a size of 2 but will be unlimited in an upcoming version).  
+The plugin expects a `.v5s` file which is actually a text file containing two lines (the dimension *t* which is limited to a size of 2 but will be unlimited in an upcoming version).  
 Each line contains an equal sized list of filenames separated by a semi-column (`;`). If a file is missing and the rendering should be unbalanced, the filename can be replaced by the keyword `empty` which will produce a black image.  
 An example of a `.v5s` file could look like:
 
