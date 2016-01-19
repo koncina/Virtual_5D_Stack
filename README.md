@@ -2,12 +2,12 @@
 
 ## Introduction
 
-[Hyperstacks](http://rsbweb.nih.gov/ij/docs/guide/146-8.html#sub:Hyperstacks-Intro) enable ImageJ to handle multidimensional images up to 5D images ($width \times height \times slices \times channels \times time frames$). To avoid unecessary duplication of raw files, this plugin enables the loading of multiple 3D files ($width \times height \times slices \times channels$) as 5D hyperstacks.
+[Hyperstacks](http://rsbweb.nih.gov/ij/docs/guide/146-8.html#sub:Hyperstacks-Intro) enable ImageJ to handle multidimensional images up to 5D images (*width* x *height* x *slices* x *channels* x *time frames*). To avoid unecessary duplication of raw files, this plugin enables the loading of multiple 3D files (*width* x *height* x *slices* x *channels*) as 5D hyperstacks.
 
 ## Usage
 
 The plugin expects a `.v5s` file which is actually a text file containing two lines (the dimension $t$ which is limited to a size of 2 but will be unlimited in an upcoming version).  
-Each line contains an equal sized list of filenames separated by a semi-column (`;`). If a file is missing and the rendering should be unbalanced, the filname can be replaced by the keyword `missing` which will produce a black image.  
+Each line contains an equal sized list of filenames separated by a semi-column (`;`). If a file is missing and the rendering should be unbalanced, the filename can be replaced by the keyword `empty` which will produce a black image.  
 An example of a `.v5s` file could look like:
 
 ```
