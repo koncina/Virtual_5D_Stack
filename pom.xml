@@ -13,7 +13,7 @@
 
 	<groupId>eu.koncina.ij</groupId>
 	<artifactId>Virtual_5D_Stack</artifactId>
-	<version>0.1.0-SNAPSHOT</version>
+	<version>0.1.1-SNAPSHOT</version>
 
 	<name>plugins/Virtual_5D_Stack.jar</name>
 	<description>A plugin to open multiple images as a 5D stack</description>
