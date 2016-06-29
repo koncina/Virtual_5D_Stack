@@ -49,6 +49,10 @@ public class Virtual_5D_Stack implements PlugIn {
 		int m = 0;
 		try {
 			n = countLines(fileName);
+			if (n == 0) {
+				IJ.error("Bad V5S file...");
+				return;
+			}
 			String[] v5s = new String[n];
 			FileReader fileReader = new FileReader(fileName);
 			BufferedReader bufferedReader = new BufferedReader(fileReader);
@@ -59,6 +63,10 @@ public class Virtual_5D_Stack implements PlugIn {
 			bufferedReader.close();
 			t = v5s.length;
 			for (int i = 0; i < v5s.length; i++) {
+				if (v5s[i] == null) {
+					t = t - 1;
+					continue;
+				}
 				String[] split = v5s[i].split(";");
 				if (split.length == 0) {
 					t = t - 1;
