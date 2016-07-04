@@ -4,7 +4,7 @@
 
 [Hyperstacks](http://rsbweb.nih.gov/ij/docs/guide/146-8.html#sub:Hyperstacks-Intro) enable ImageJ to handle multidimensional images up to 5D images (*width* x *height* x *channels* x *slices* x *frames* *i.e.* xyczt). To avoid unnecessary duplication of raw files, this plugin enables the loading of multiple 3D files (*width* x *height* x *slices* x *channels*) as 5D hyperstacks.
 
-** Important note: ** This plugin loads the complete stack of pictures into memory (while the notion of [virtual stack in Fiji/ImageJ](http://rsbweb.nih.gov/ij/docs/guide/146-8.html#sub:Virtual-Stacks) is referring to the on the fly loading of images to reduce memory load).
+**Important note:** This plugin loads the complete stack of pictures into memory (while the notion of [virtual stack in Fiji/ImageJ](http://rsbweb.nih.gov/ij/docs/guide/146-8.html#sub:Virtual-Stacks) is referring to the on the fly loading of images to reduce memory load).
 
 ## Usage
 
