@@ -71,7 +71,7 @@ class Stack_Loader {
 	public ImagePlus load(List<File> fileList, int channel) {
 		List<String> folderList = new ArrayList<String>();
 		int counter = 0;
-		int[] CurrentSize = new int[2];
+		int[] CurrentSize = new int[3];
 		int[] MaxSize = new int[2];
 		int prevCSize = 0;
 		int channels = 0;
