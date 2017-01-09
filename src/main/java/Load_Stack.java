@@ -33,26 +33,26 @@ public class Load_Stack implements PlugIn {
 		String pattern = gd.getNextString();
 		Boolean regex = gd.getNextBoolean();
 		File folder = new File(path);
-		File[] listOfFiles = folder.listFiles();
-		Arrays.sort(listOfFiles);
+		File[] list_of_files = folder.listFiles();
+		Arrays.sort(list_of_files);
 
-		List<File> fileList = new ArrayList<File>();
-		for (int i = 0; i < listOfFiles.length; i++) {
-			if (listOfFiles[i].isFile()) {
-				if ((regex && listOfFiles[i].getName().matches(pattern)) || (!regex && listOfFiles[i].getName().contains(pattern)))
+		List<File> file_list = new ArrayList<File>();
+		for (int i = 0; i < list_of_files.length; i++) {
+			if (list_of_files[i].isFile()) {
+				if ((regex && list_of_files[i].getName().matches(pattern)) || (!regex && list_of_files[i].getName().contains(pattern)))
 				{
-					fileList.add(listOfFiles[i]);
+					file_list.add(list_of_files[i]);
 				}
 			}
 		}
-		if (fileList.size() == 0) {
+		if (file_list.size() == 0) {
 			IJ.showMessage("Load Stack", "No file matching the pattern was found!");
 			return;
 		}
 		
 		Stack_Loader sl = new Stack_Loader();
 		IJ.showStatus("Loading image");
-		ImagePlus imp = sl.load(fileList, -1);
+		ImagePlus imp = sl.load(file_list, -1);
 		if (imp == null) {
 			IJ.error("Could not open image...");
 			return;
@@ -68,85 +68,82 @@ public class Load_Stack implements PlugIn {
 class Stack_Loader {
 	ConsoleOutputCapturer hideMsg = new ConsoleOutputCapturer();
 
-	public ImagePlus load(List<File> fileList, int channel) {
-		List<String> folderList = new ArrayList<String>();
-		int counter = 0;
-		int[] CurrentSize = new int[3];
-		int[] MaxSize = new int[2];
-		int prevCSize = 0;
+	public ImagePlus load(List<File> file_list, int channel) {
+		int[] current_size = new int[3];
+		int[] max_size = new int[2];
+		int old_c_size = 0;
 		int channels = 0;
-		boolean SameDimension = true;
-		int[] Dimension = new int[] { -1, -1, -1 };
+		boolean same_dim = true;
+		int[] dimension = new int[] { -1, -1, -1 };
 
 		IJ.showStatus("Determining maximum canvas size...");
-		for (int i = 0; i < fileList.size(); i++) {
-			counter += 1;
-			IJ.showProgress(counter / fileList.size());
-			if (!fileList.get(i).getName().equals("empty")) {
-				CurrentSize = getSize(fileList.get(i));
-				if (CurrentSize[0] > MaxSize[0])
-					MaxSize[0] = CurrentSize[0];
-				if (CurrentSize[1] > MaxSize[1])
-					MaxSize[1] = CurrentSize[1];
-				if (channels != 0 && CurrentSize[2] != prevCSize)
-					SameDimension = false;
-				prevCSize = CurrentSize[2];
+		for (int i = 0; i < file_list.size(); i++) {
+			IJ.showProgress(i / file_list.size());
+			if (file_list.get(i) != null) {
+				current_size = getSize(file_list.get(i));
+				if (current_size[0] > max_size[0])
+					max_size[0] = current_size[0];
+				if (current_size[1] > max_size[1])
+					max_size[1] = current_size[1];
+				if (channels != 0 && current_size[2] != old_c_size)
+					same_dim = false;
+				old_c_size = current_size[2];
 			}
-			if (SameDimension && channel == -1) channels = CurrentSize[2];
+			if (same_dim && channel == -1) channels = current_size[2];
 			else channels = 1;
 		}
-		counter = 0;
+
 		// We obtained the maximum size...
 		try {
 			IJ.showStatus("Loading the stack...");
 			ImageProcessorReader r = new ImageProcessorReader(new ChannelSeparator(LociPrefs.makeImageReader()));
-			ImageStack stack = new ImageStack(MaxSize[0], MaxSize[1]);
+			ImageStack stack = new ImageStack(max_size[0], max_size[1]);
 			CanvasResizer cr = new CanvasResizer();
-			for (int i = 0; i < fileList.size(); i++) {
-				counter += 1;
-				folderList.add(fileList.get(i).getParent());
-				IJ.showProgress(counter / fileList.size());
-				if (!fileList.get(i).getName().equals("empty")) {
+			for (int i = 0; i < file_list.size(); i++) {
+				IJ.showProgress(i / file_list.size());
+				if (file_list.get(i) != null) {
 					hideMsg.start();
-					r.setId(fileList.get(i).toString());
+					r.setId(file_list.get(i).toString());
 					hideMsg.stop();
 					int num = r.getImageCount();
-					if ((Dimension[0] != r.getSizeC()) && (r.getSizeC() != -1) && (Dimension[0] != -1))
-						SameDimension = false;
-					else if ((Dimension[1] != r.getSizeZ()) && (r.getSizeZ() != -1) && (Dimension[1] != -1))
-						SameDimension = false;
-					else if ((Dimension[2] != r.getSizeT()) && (r.getSizeT() != -1) && (Dimension[2] != -1))
-						SameDimension = false;
+					if ((dimension[0] != r.getSizeC()) && (r.getSizeC() != -1) && (dimension[0] != -1))
+						same_dim = false;
+					else if ((dimension[1] != r.getSizeZ()) && (r.getSizeZ() != -1) && (dimension[1] != -1))
+						same_dim = false;
+					else if ((dimension[2] != r.getSizeT()) && (r.getSizeT() != -1) && (dimension[2] != -1))
+						same_dim = false;
 					int width = r.getSizeX();
 					int height = r.getSizeY();
-					int x = (MaxSize[0] - width) / 2;
-					int y = (MaxSize[1] - height) / 2;
-					Dimension[0] = r.getSizeC();
-					Dimension[1] = r.getSizeZ();
-					Dimension[2] = r.getSizeT();
+					int x = (max_size[0] - width) / 2;
+					int y = (max_size[1] - height) / 2;
+					dimension[0] = r.getSizeC();
+					dimension[1] = r.getSizeZ();
+					dimension[2] = r.getSizeT();
 
 					if (channel != -1) {
 						ImageProcessor ip = r.openProcessors(channel)[0];
-						ip = cr.expandImage(ip, MaxSize[0], MaxSize[1], x, y);
-						stack.addSlice(fileList.get(i).getName() + "-" + channel, ip);
+						ip = cr.expandImage(ip, max_size[0], max_size[1], x, y);
+						ip.flipHorizontal();
+						stack.addSlice(file_list.get(i).getName() + "-" + channel, ip);
 					} else {
 						for (int j = 0; j < num; j++) {
 							ImageProcessor ip = r.openProcessors(j)[0];
-							ip = cr.expandImage(ip, MaxSize[0], MaxSize[1], x, y);
-							stack.addSlice(fileList.get(i).getName() + "-" + (j + 1), ip);
+							ip = cr.expandImage(ip, max_size[0], max_size[1], x, y);
+							stack.addSlice(file_list.get(i).getName() + "-" + (j + 1), ip);
 						}
 					}
 				} else {
 					for (int j = 0; j < channels; j++) {
-						short[] pixels = new short[MaxSize[0] * MaxSize[1]];
-						ImageProcessor ip = new ShortProcessor(MaxSize[0], MaxSize[1], pixels, null);
-						stack.addSlice("empty", ip);
+						short[] pixels = new short[max_size[0] * max_size[1]];
+						ImageProcessor ip = new ShortProcessor(max_size[0], max_size[1], pixels, null);
+						stack.addSlice("missing", ip);
 					}
 				}
 			}
+			IJ.showProgress(2);
 			r.close();
 			ImagePlus imp = new ImagePlus("", stack);
-			imp.setDimensions(channels, fileList.size(), 1);
+			imp.setDimensions(channels, file_list.size(), 1);
 			return(imp);
 		} catch (FormatException exc) {
 			IJ.error("Sorry, an error occurred: " + exc.getMessage());
