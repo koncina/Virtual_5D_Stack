@@ -19,8 +19,11 @@ import ij.io.OpenDialog;
 import java.io.IOException;
 import java.io.File;
 import java.util.List;
+import java.util.Map;
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
+
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.DocumentBuilder;
 import org.w3c.dom.Document;
@@ -31,18 +34,6 @@ import org.xml.sax.SAXParseException;
 
 public class Virtual_5D_Stack implements PlugIn {
 	
-	class VersionException extends Exception {
-		public VersionException(String msg){
-			super(msg);
-		}
-	}
-	
-	class UnbalancedException extends Exception {
-		public UnbalancedException(String msg){
-			super(msg);
-		}
-	}
-
 	ConsoleOutputCapturer hideMsg = new ConsoleOutputCapturer();
 	
 	public void run(String arg) {
@@ -56,14 +47,10 @@ public class Virtual_5D_Stack implements PlugIn {
 		// The name of the file to open.
 		String fileName = path + od.getFileName();
 		Document doc = null;
-		GenericDialog gd = new GenericDialog("Options");
-		gd.addNumericField("Channel: ", -1, 0);
-		gd.showDialog();
-		if (gd.wasCanceled())
-			return;
-		int channel = (int) gd.getNextNumber();
-
-		int x_size = 0, y_size = 0, c_size = 0, z_size = 0, t_size = 0;
+		
+		int width = 0, height = 0, c_size = 0, z_size = 0, t_size = 0;
+		
+		Map<Integer, String> channels = new HashMap<Integer, String>();
 		
 		File f = new File(fileName);
 		String title = f.getName().replace(".v5s", "");
@@ -76,35 +63,74 @@ public class Virtual_5D_Stack implements PlugIn {
 			doc.getDocumentElement().normalize();
 			
 			if (doc.getDocumentElement().getNodeName() != "v5s") throw new IOException();
-							
-			if (Integer.parseInt(doc.getDocumentElement().getAttribute("version")) > 1) throw new VersionException("This v5s file cannot be handled by the current plugin");
+			
+			// reading the info node
+			Element info_element = (Element) doc.getElementsByTagName("info").item(0);
+			int version = Integer.parseInt(info_element.getElementsByTagName("version").item(0).getTextContent());
+			if (version > 1) IJ.error("The v5s file cannot be handled by this version of the plugin");
+			width = Integer.parseInt(info_element.getElementsByTagName("width").item(0).getTextContent());
+			height = Integer.parseInt(info_element.getElementsByTagName("height").item(0).getTextContent());
+			IJ.log("" + width + " - " + height);
+			
+			Element t_element = (Element) info_element.getElementsByTagName("frames").item(0);
+			t_size = t_element.getElementsByTagName("frame").getLength();
+			if (t_size == 0) t_size = Integer.parseInt(t_element.getTextContent());
+			
+			Element z_element = (Element) info_element.getElementsByTagName("slices").item(0);
+			z_size = z_element.getElementsByTagName("slice").getLength();
+			if (z_size == 0) z_size = Integer.parseInt(z_element.getTextContent());
+
+			Element channels_element = (Element) info_element.getElementsByTagName("channels").item(0);
+			NodeList c_list = channels_element.getElementsByTagName("channel");
+			
+			c_size = c_list.getLength();
+			
+			for (int i = 0; i < c_size; i++) {
+				Element c_element = (Element) c_list.item(i);
+				int c_index = Integer.parseInt(c_element.getElementsByTagName("id").item(0).getTextContent());
+				String c_name = c_element.getElementsByTagName("name").item(0).getTextContent();
+				channels.put(c_index, c_name);
+			}
+			
+			if (channels.keySet().size() != c_size) {
+				IJ.error("Bad channel information");
+				return;
+			}
 		} catch (NumberFormatException e) {
-			IJ.error("Cannot determine v5s file version");
+			IJ.error("Cannot parse v5s information numbers");
 		} catch (SAXParseException e) {
 			IJ.error("Cannot parse V5s file: try to update to V5s xml version >= 1");
-		} catch (VersionException e) {
-			IJ.error("The v5s file cannot be handled by this version of the plugin");
 		} catch (Exception e) {
 			e.printStackTrace();
 	    }
 		
-		try {
-				x_size = Integer.parseInt(doc.getDocumentElement().getAttribute("x"));
-				y_size = Integer.parseInt(doc.getDocumentElement().getAttribute("y"));
-				c_size = Integer.parseInt(doc.getDocumentElement().getAttribute("c"));
-				z_size = Integer.parseInt(doc.getDocumentElement().getAttribute("z"));
-				t_size = Integer.parseInt(doc.getDocumentElement().getAttribute("t"));
-			} catch (NumberFormatException e) {
-				IJ.error("Could not determine v5s image size");
-				return;
+		
+		GenericDialog gd = new GenericDialog("Options");
+		//gd.addNumericField("Channel: ", -1, 0);
+		
+		for (int key : channels.keySet() ) {
+			gd.addCheckbox(key + " - " + channels.get(key), true);	
 		}
+		
+		gd.showDialog();
+		if (gd.wasCanceled())
+			return;
+		
+		List<Integer> c_select = new ArrayList<Integer>();
+		for (int key : channels.keySet() ) {
+			if (gd.getNextBoolean()) c_select.add(key);
+		}
+		
+		c_size = c_select.size();
+		if (c_size == 0) return;
+		
 		try {	
 			NodeList image_list = doc.getElementsByTagName("image");
 			
 			IJ.showStatus("Loading the stack...");
 			ImageProcessorReader r = new ImageProcessorReader(new ChannelSeparator(LociPrefs.makeImageReader()));
 			CanvasResizer cr = new CanvasResizer();
-			ImageStack stack = new ImageStack(x_size, y_size, z_size * t_size * c_size);					
+			ImageStack stack = new ImageStack(width, height, z_size * t_size * c_size);					
 						
 			for (int i = 0; i < image_list.getLength(); i++) {
 				IJ.showProgress(i / image_list.getLength());
@@ -119,8 +145,8 @@ public class Virtual_5D_Stack implements PlugIn {
 					r.setId(new File(path, filename).toString());					
 					hideMsg.stop();
 					
-					int x_pos = (x_size - r.getSizeX()) / 2;
-					int y_pos = (y_size - r.getSizeY()) / 2;
+					int x_pos = (width - r.getSizeX()) / 2;
+					int y_pos = (height - r.getSizeY()) / 2;
 					
 					// Mapping channels
 					NodeList c_list = image_element.getElementsByTagName("c");
@@ -128,9 +154,10 @@ public class Virtual_5D_Stack implements PlugIn {
 						Node c_node = c_list.item(c);
 						if (c_node.getNodeType() == Node.ELEMENT_NODE) {
 							Element c_element = (Element) c_node;
-							int c_pos = Integer.parseInt(c_element.getTextContent());
-							ImageProcessor ip = r.openProcessors(Integer.parseInt(c_element.getAttribute("channel")) - 1)[0];
-							ip = cr.expandImage(ip, x_size, y_size, x_pos, y_pos);
+							int c_pos = Integer.parseInt(c_element.getAttribute("id"));
+							if (!c_select.contains(c_pos)) continue;
+							ImageProcessor ip = r.openProcessors(Integer.parseInt(c_element.getTextContent()) - 1)[0];
+							ip = cr.expandImage(ip, width, height, x_pos, y_pos);
 							if (Boolean.parseBoolean(image_element.getAttribute("flipHorizontal"))) ip.flipHorizontal();
 							if (Boolean.parseBoolean(image_element.getAttribute("flipVertical"))) ip.flipVertical();
 							int stack_pos = (t_pos - 1) * z_size * c_size +
@@ -144,8 +171,8 @@ public class Virtual_5D_Stack implements PlugIn {
 			}
 
 			// Replacing empty slices with black images
-			short[] pixels = new short[x_size * y_size];
-			ImageProcessor ip = new ShortProcessor(x_size, y_size, pixels, null);
+			short[] pixels = new short[width * height];
+			ImageProcessor ip = new ShortProcessor(width, height, pixels, null);
 			for (int i = 0; i < stack.getSize(); i++) {
 				if (stack.getPixels(i + 1) == null) {
 					stack.setProcessor(ip, i + 1);
