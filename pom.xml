@@ -29,7 +29,7 @@
 	</developers>
 
 	<properties>
-		<main-class>Load_V5S</main-class>
+		<main-class>Open_V5S</main-class>
 	</properties>
 
 	<repositories>
