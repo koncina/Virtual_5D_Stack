@@ -32,7 +32,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXParseException;
 
-public class Virtual_5D_Stack extends ImagePlus  implements PlugIn {
+public class Load_V5S extends ImagePlus  implements PlugIn {
 
 	ConsoleOutputCapturer hideMsg = new ConsoleOutputCapturer();
 
