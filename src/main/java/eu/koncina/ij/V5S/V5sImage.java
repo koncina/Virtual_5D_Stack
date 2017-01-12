@@ -26,6 +26,10 @@ public class V5sImage {
 		public File getPath() {
 			return(this.img);
 		}
+		
+		public String getName() {
+			return(this.img.getName());
+		}
 
 		public V5sPosition getSourcePosition() {
 			return(this.sourcePosition);

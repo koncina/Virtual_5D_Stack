@@ -29,7 +29,7 @@
 	</developers>
 
 	<properties>
-		<main-class>eu.koncina.ij.V5S.Open_V5S</main-class>
+		<main-class>eu.koncina.ij.V5S.OpenV5s</main-class>
 	</properties>
 
 	<repositories>
