@@ -1,3 +1,5 @@
+package eu.koncina.ij.V5S;
+
 import java.io.PrintStream;
 import java.io.ByteArrayOutputStream;
 
