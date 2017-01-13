@@ -191,8 +191,6 @@ public class Virtual5DStack {
 		return;
 	}
 
-
-
 	private int[] getSize(File f) {
 		if (f == null)
 			return null;

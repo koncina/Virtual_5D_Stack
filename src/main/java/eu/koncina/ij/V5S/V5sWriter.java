@@ -2,12 +2,11 @@ package eu.koncina.ij.V5S;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -71,18 +70,24 @@ public class V5sWriter {
 
 		// Add images
 
+		V5sImage prevImg = new V5sImage();
 
-		String oldFilename = "";
-		
-		
-		
-		for (V5sImage f : v5s.imgList.stream().sorted((s1, s2) -> s1.getPath().getName().compareTo(s2.getPath().getName())).collect(Collectors.toList())) {
-		
+		// Comparator to sort the list by filename, t, z and c
+		Comparator<V5sImage> comparator = Comparator.comparing(img -> img.getName());
+		comparator = comparator.thenComparing(Comparator.comparing(img -> img.targetPosition.z));
+		comparator = comparator.thenComparing(Comparator.comparing(img -> img.targetPosition.t));
+		comparator = comparator.thenComparing(Comparator.comparing(img -> img.targetPosition.c));
+
+		Element img = doc.createElement("image");
+		//for (V5sImage f : v5s.imgList.stream().sorted((s1, s2) -> s1.getName().compareTo(s2.getName())).collect(Collectors.toList())) {
+		for (V5sImage f : v5s.imgList.stream().sorted(comparator).collect(Collectors.toList())) {
 			// Would be nice to reconstruct Xml with channels...
 			// We need to check that the remaining positions remain the same...
-		//	if (!oldFilename.equals(f.getName())) {
-				oldFilename = f.getName();
-				Element img = doc.createElement("image");
+
+			if ((!f.getName().equals(prevImg.getName())) || (prevImg.targetPosition.t != f.targetPosition.t) || (prevImg.targetPosition.z != f.targetPosition.z)) {
+				if (img.hasChildNodes()) root.appendChild(img);
+				prevImg = f;
+				img = doc.createElement("image");
 				Element imgFilename = doc.createElement("filename");
 				Element imgZ = doc.createElement("z");
 				Element imgT = doc.createElement("t");
@@ -97,13 +102,15 @@ public class V5sWriter {
 				img.appendChild(imgZ);
 				img.appendChild(imgT);
 				img.appendChild(imgC);
-				root.appendChild(img);
-		//	}
+			} else {
+				Element imgC = doc.createElement("c");
+				imgC.appendChild(doc.createTextNode(Integer.toString(f.getSourcePosition().getC())));
+				imgC.setAttribute("id", Integer.toString(f.getTargetPosition().getC()));
+				img.appendChild(imgC);
+			}
 
 		}
-
-
-
+		if (img.hasChildNodes()) root.appendChild(img);
 
 		try {
 			Transformer tr = TransformerFactory.newInstance().newTransformer();
