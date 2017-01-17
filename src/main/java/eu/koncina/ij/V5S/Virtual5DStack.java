@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.google.common.primitives.Ints;
+
 import ij.CompositeImage;
 import ij.IJ;
 import ij.ImagePlus;
@@ -27,7 +29,7 @@ public class Virtual5DStack {
 	public static final int xyctz = 1;
 
 	public File file;
-	List<V5sImage> imgList = new ArrayList<V5sImage>();
+	private List<V5sImage> imgList = new ArrayList<V5sImage>();
 	private List<Integer> activeChannels = new ArrayList<Integer>();
 	public Map<Integer, String> channels = new HashMap<Integer, String>(); // map of channel IDs and names
 
@@ -113,7 +115,72 @@ public class Virtual5DStack {
 		this.imgList = imgList;
 	}
 
+	public V5sImage getImage(int id) {
+		if (id < 0 || id > this.imgList.size()) return null;
+		return this.imgList.get(id);
+	}
+	
+	public V5sImage getImage(V5sPosition pos) {
+		for (V5sImage i : this.imgList) {
+			if (i.targetPosition.equals(pos)) return(i);
+		}
+		return null;
+	}
+	
+	public int getID(V5sPosition pos) {
+		for (int i = 0; i < this.imgList.size(); i++) {
+			if (this.imgList.get(i).targetPosition.equals(pos)) return(i);
+		}
+		return -1;
+	}
+	
+	public int[] getZTIDs(V5sPosition pos) {
+		List<Integer> ids = new ArrayList<Integer>();
+		
+		for (int i = 0; i < this.imgList.size(); i++) {
+			if (this.imgList.get(i).targetPosition.equalsZT(pos)) ids.add(i);
+		}
+		return Ints.toArray(ids);
+	}
 
+	public void setImage(V5sImage img, V5sPosition pos) {
+		for (int i = 0; i < this.imgList.size(); i++) {
+			if (this.imgList.get(i).targetPosition.equals(pos)) {
+				this.imgList.set(i, img);
+				return;
+			}
+
+		}
+		return;
+	}
+	
+	public void setImage(V5sImage img, int id) {
+		this.imgList.set(id, img);
+	}
+
+	public void movePosition(V5sPosition source, V5sPosition target) {
+		IJ.log("source is " + source.getC() + " - " + source.getZ() + " - " + source.getT());
+		for (V5sImage i : this.imgList) {
+			IJ.log("i is " + i.targetPosition.getC() + " - " + i.targetPosition.getZ() + " - " + i.targetPosition.getT());
+			if (i.targetPosition.equals(source)) {
+				IJ.log("Perfect match");
+				i.targetPosition = target;
+			} else if (source.getC() == 0 && i.targetPosition.equalsZT(source)) {
+				IJ.log("Partial match");
+			}
+		}
+	}
+
+	public void setZT(V5sPosition source, V5sPosition target) {
+		for (V5sImage img : this.imgList) {
+			if (img.targetPosition.equalsZT(source)) {
+				img.targetPosition.setZ(target.getZ());
+				img.targetPosition.setT(target.getT());
+				IJ.log("ZT match");
+			}
+
+		}
+	}
 
 	public ImagePlus load() throws FormatException, IOException {
 		if (this.imgList.size() == 0) throw new FormatException();
@@ -215,5 +282,6 @@ public class Virtual5DStack {
 		if (error) throw new IllegalStateException();
 		return size;
 	}
+
 
 }

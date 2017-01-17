@@ -8,7 +8,7 @@ import ij.WindowManager;
 import ij.io.SaveDialog;
 import ij.plugin.PlugIn;
 
-public class SaveV5s extends ImagePlus  implements PlugIn {
+public class SaveV5s extends ImagePlus implements PlugIn {
 	public void run(String arg) {
 		ImagePlus imp = WindowManager.getCurrentImage();
 		if (null == imp) return;
