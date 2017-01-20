@@ -4,10 +4,6 @@ import ij.*;
 import ij.plugin.filter.PlugInFilter;
 import ij.process.*;
 import ij.plugin.CanvasResizer;
-import ij.plugin.CompositeConverter;
-import ij.plugin.MontageMaker;
-import ij.plugin.RGBStackMerge;
-import ij.plugin.ZProjector;
 import ij.gui.*;
 import ij.io.SaveDialog;
 
@@ -15,6 +11,8 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
 import java.util.*;
+
+import eu.koncina.ij.V5S.Virtual5DStack.V5sElement;
 
 /**
 	Adapted from the Mouse Listener plugin example
@@ -34,10 +32,10 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 
 	boolean active = false;
 
-	int gridX = 3;
-	int gridY = 2;
+	int gridX = 0;
+	int gridY = 0;
 
-	V5sPosition gridStart = new V5sPosition();
+	int[] gridStart = new int[2];
 
 	int startX = 0;
 	int startY = 0;
@@ -45,14 +43,19 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 	int thumbOffsetX = 0;
 	int thumbOffsetY = 0;
 
-	static Vector images = new Vector();
+	static Vector<Integer> images = new Vector<Integer>();
 
 	public int setup(String arg, ImagePlus imp) {
 		this.imp = imp;
-		this.v5s = (Virtual5DStack) imp.getProperty("v5s");
-		this.montage = createMontage(imp, 0.5);
-		this.imp.hide();
-		this.montage.show();
+		v5s = (Virtual5DStack) imp.getProperty("v5s");
+		
+		gridX = v5s.getNSlices();
+		gridY = v5s.getNFrames();
+		
+		montage = createMontage(imp, 0.5);
+		imp.hide();
+		montage.show();
+		
 		
 
 		this.thumbOffsetX = (montage.getWidth() * 3) / (4 * gridX * 2);
@@ -114,11 +117,11 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 		}
 	}
 
-	public ImageStack extractCell(V5sPosition gridPos, ImagePlus imp) {
+	public ImageStack extractCell(int[] gridPos, ImagePlus imp) {
 		int cellWidth = imp.getWidth() / this.gridX;
 		int cellHeight = imp.getHeight() / this.gridY;
-		int posX = (int) (gridPos.getZ() - 1) * cellWidth;
-		int posY = (int) (gridPos.getT() - 1) * cellHeight;
+		int posX = (int) (gridPos[0] - 1) * cellWidth;
+		int posY = (int) (gridPos[1] - 1) * cellHeight;
 
 		ImageStack cell = new ImageStack(cellWidth, cellHeight);
 
@@ -127,50 +130,50 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 			ip.setRoi(new Rectangle(posX, posY, cellWidth, cellHeight));
 			cell.addSlice(ip.crop());
 		}
-
 		return(cell);		
 	}
 
-	public void swapCells(V5sPosition source, V5sPosition target) {
+	public void swapCells(int p1, int p2, int frame) {
 		int cellWidth = montage.getWidth() / this.gridX;
 		int nC = montage.getNChannels();
 		
-		if (target.getZ() < 0) {
+		if (p2 <= 0) {
 			CanvasResizer cr = new CanvasResizer();
 			this.montage.setStack(null, cr.expandStack(montage.getStack(), montage.getWidth() + cellWidth, montage.getHeight(), cellWidth, 0));
 			this.gridX = this.gridX + 1;
-			source.setZ(source.getZ() + 1);
-			target.setZ(1);
-			
-			for (int z = 0; z < this.v5s.z; z++) {
-				
-				this.v5s.setZT(new V5sPosition(0, z + 1, source.getT()), new V5sPosition(0, z + 2, source.getT()));
-			}
-		} else if (target.getZ() > this.gridX) {
+			v5s.addSlice(0);
+			p1++;
+			p2 = 1;
+		} else if (p2 > this.gridX) {
 			CanvasResizer cr = new CanvasResizer();
 			this.montage.setStack(null, cr.expandStack(montage.getStack(), montage.getWidth() + cellWidth, montage.getHeight(), 0, 0));
 			this.gridX = this.gridX + 1;
+			v5s.addSlice();
 		}
-		ImageStack targetCell = extractCell(target, this.montage);
+				
+		ImageStack targetCell = extractCell(new int[]{p2, frame}, montage);
 		for (int c = 0; c < nC; c++) {
-			this.montage.getStack().getProcessor(c + 1).insert(this.sourceCell.getProcessor(c + 1), (int) (target.getZ() - 1) * this.montage.getWidth() / gridX, (int) (target.getT() - 1) * this.montage.getHeight() / gridY);
-			this.montage.getStack().getProcessor(c + 1).insert(targetCell.getProcessor(c + 1), (int) (source.getZ() - 1) * this.montage.getWidth() / gridX, (int) (source.getT() - 1) * this.montage.getHeight() / gridY);
+			montage.getStack().getProcessor(c + 1).insert(sourceCell.getProcessor(c + 1), (int) (p2 - 1) * montage.getWidth() / gridX, (int) (frame - 1) * montage.getHeight() / gridY);
+			montage.getStack().getProcessor(c + 1).insert(targetCell.getProcessor(c + 1), (int) (p1 - 1) * montage.getWidth() / gridX, (int) (frame - 1) * montage.getHeight() / gridY);
 		}
-		//this.v5s.setZT(source, target);
-		//this.v5s.setZT(target, source);
-		montage.updateAndRepaintWindow();
+				
+		// array representing the slice (with c * t dimensions)
+		V5sElement[] tempElements = v5s.getElementsC(p1, frame);
+		v5s.setElementsC(v5s.getElementsC(p2, frame) , p1, frame);
+		v5s.setElementsC(tempElements , p2, frame);
+
+		montage.updateAndRepaintWindow();		
 	}
 
-	public V5sPosition getGridPosition(int mouseX, int mouseY) {
+	public int[] getGridPosition(int mouseX, int mouseY) {
 		int col = 0;
 		if (mouseX < 0) col = -1;
 		else col = (int) Math.floor(mouseX / (montage.getWidth() / gridX)) + 1;
 		int row = (int) Math.floor(mouseY / (montage.getHeight() / gridY)) + 1;
-		return new V5sPosition(col, row);
+		return new int[]{col, row};
 	}
 
 	public void mousePressed(MouseEvent e) {
-
 		Toolbar.getInstance();
 		if (Toolbar.getToolId() != Toolbar.getInstance().getToolId("Sort on montage")) {
 			this.active = false;
@@ -197,32 +200,26 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 		this.sourceCellThumb = tmp.getProcessor().resize((int) Math.floor(0.75 * this.montage.getWidth() / gridX));
 	}
 
-	public void mouseReleased(MouseEvent e) {
+	public void mouseReleased(MouseEvent e) {	
 		if (!active) return;
 		montage.getCanvas().setCursor(defaultCursor);
 		montage.killRoi();
 		int x = e.getX();
 		int y = e.getY();
-		V5sPosition gridTarget = getGridPosition(canvas.offScreenX(x), canvas.offScreenY(y));
-
-		if (gridTarget.equals(gridStart)) IJ.log("Same coordinates");
-		else if (gridStart.getT() == gridTarget.getT()) {
-			IJ.log("From coordinates " + gridStart.getZ() + ", " + gridStart.getT());
-			IJ.log("To coordinates " + gridTarget.getZ() + ", " + gridTarget.getT());
-			swapCells(gridStart, gridTarget);
-		} else {
-			IJ.log("not allowed");
-		}
+		int[] gridTarget = getGridPosition(canvas.offScreenX(x), canvas.offScreenY(y));
+		if (gridStart[1] != gridTarget[1]) {
+			IJ.log("only slices can be swapped (same frame)");
+		} else if (gridStart[0] != gridTarget[0]) {
+			swapCells(gridStart[0], gridTarget[0], gridStart[1]);
+		}		
 	}
 
 	public void mouseDragged(MouseEvent e) {
-
 		if (!active) return;
 		int x = e.getX();
 		int y = e.getY();
 		int offscreenX = canvas.offScreenX(x);
 		int offscreenY = canvas.offScreenY(y);
-
 		montage.setRoi(new ImageRoi(offscreenX - this.thumbOffsetX, offscreenY - this.thumbOffsetY, this.sourceCellThumb));
 	}
 
@@ -255,7 +252,6 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 			IJ.log("Montage closed");
 			this.imp.show();
 			SaveDialog sd = new SaveDialog("Save V5S", "untitled", ".v5s");  
-
 			V5sWriter v5sw  = new V5sWriter();
 			try {
 				v5sw.writeXml(v5s, new File(sd.getDirectory(), sd.getFileName()));
@@ -270,9 +266,5 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 	public void imageUpdated(ImagePlus imp) {
 		return;
 	}
-
-
-
-
 }
 

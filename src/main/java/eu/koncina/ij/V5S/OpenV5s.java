@@ -2,9 +2,6 @@ package eu.koncina.ij.V5S;
 
 import java.io.File;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.GenericDialog;
@@ -26,8 +23,6 @@ public class OpenV5s extends ImagePlus  implements PlugIn {
 
 		String fileName = path + od.getFileName(); // The name of the file to open.
 		
-		List<Integer> c_select = new ArrayList<Integer>(); // the selected channels
-		
 		File f = new File(fileName);
 		//String title = f.getName().replace(".v5s", "");
 		GenericDialog gd = new GenericDialog("Options");
@@ -39,30 +34,29 @@ public class OpenV5s extends ImagePlus  implements PlugIn {
 		hideMsg.start();
 		v5s = v5sr.loadFromXml(f);
 		hideMsg.stop();
-		
+
 		// Trying to load from the old text format
 		if (v5s == null) v5s = v5sr.loadFromTxt(f);
-					
-		for (int key : v5s.channels.keySet() ) {
-			gd.addCheckbox(key + " - " + v5s.channels.get(key), true);	
+		
+		String[] channelNames = v5s.getChannelNames();
+		
+		for (int i = 0; i < channelNames.length; i ++) {
+			gd.addCheckbox( (i + 1) + " - " + channelNames[i], true);
 		}
 
 		gd.showDialog();
 		if (gd.wasCanceled())
 			return;
 
-		for (int key : v5s.channels.keySet() ) {
-			if (gd.getNextBoolean()) c_select.add(key);
+		for (int i = 0; i < channelNames.length; i ++) {
+			v5s.setChannelState(i, gd.getNextBoolean());
 		}
 
-		if (c_select.size() == 0) return;
-		
-		v5s.selectChannels(c_select);
-		
 		try {
 			v5s.load().show();
 		} catch (Exception e) {
 			IJ.error("Could not load V5S");
+			IJ.log(e.toString());
 		}
 	}
 }

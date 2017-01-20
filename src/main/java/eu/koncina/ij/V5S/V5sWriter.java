@@ -6,9 +6,6 @@ import org.w3c.dom.Element;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.Comparator;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -40,25 +37,26 @@ public class V5sWriter {
 		plugin.appendChild(doc.createTextNode(PLUGIN_VERSION));
 		info.appendChild(plugin);
 		Element width = doc.createElement("width");
-		width.appendChild(doc.createTextNode(Integer.toString(v5s.x)));
+		width.appendChild(doc.createTextNode(Integer.toString(v5s.getWidth())));
 		info.appendChild(width);
 		Element height = doc.createElement("height");
-		height.appendChild(doc.createTextNode(Integer.toString(v5s.y)));
+		height.appendChild(doc.createTextNode(Integer.toString(v5s.getHeight())));
 		info.appendChild(height);
 		Element slices = doc.createElement("slices");
-		slices.appendChild(doc.createTextNode(Integer.toString(v5s.z)));
+		slices.appendChild(doc.createTextNode(Integer.toString(v5s.getNSlices())));
 		info.appendChild(slices);
 		Element frames = doc.createElement("frames");
-		frames.appendChild(doc.createTextNode(Integer.toString(v5s.t)));
+		frames.appendChild(doc.createTextNode(Integer.toString(v5s.getNFrames())));
 		info.appendChild(frames);
 
 		Element channels = doc.createElement("channels");
-		for (Map.Entry<Integer, String> c : v5s.channels.entrySet()) {
+		String[] cNames = v5s.getChannelNames();		
+		for (int i = 0; i < cNames.length; i++) {
 			Element channel = doc.createElement("channel");
 			Element cId = doc.createElement("id");
-			cId.appendChild(doc.createTextNode(Integer.toString(c.getKey())));
+			cId.appendChild(doc.createTextNode(Integer.toString(i + 1)));
 			Element cName = doc.createElement("name");
-			cName.appendChild(doc.createTextNode(c.getValue()));
+			cName.appendChild(doc.createTextNode(cNames[i]));
 
 			channel.appendChild(cId);
 			channel.appendChild(cName);
@@ -67,49 +65,42 @@ public class V5sWriter {
 
 		info.appendChild(channels);
 		root.appendChild(info);
-
+		
 		// Add images
-
-		V5sImage prevImg = new V5sImage();
-
-		// Comparator to sort the list by filename, t, z and c
-		Comparator<V5sImage> comparator = Comparator.comparing(img -> img.getName());
-		comparator = comparator.thenComparing(Comparator.comparing(img -> img.targetPosition.z));
-		comparator = comparator.thenComparing(Comparator.comparing(img -> img.targetPosition.t));
-		comparator = comparator.thenComparing(Comparator.comparing(img -> img.targetPosition.c));
+		File prevImg = new File("");
+		int[] prevTargetPosition = new int[3];
 
 		Element img = doc.createElement("image");
-		//for (V5sImage f : v5s.imgList.stream().sorted((s1, s2) -> s1.getName().compareTo(s2.getName())).collect(Collectors.toList())) {
-		for (V5sImage f : v5s.imgList.stream().sorted(comparator).collect(Collectors.toList())) {
-			// Would be nice to reconstruct Xml with channels...
-			// We need to check that the remaining positions remain the same...
-
-			if ((!f.getName().equals(prevImg.getName())) || (prevImg.targetPosition.t != f.targetPosition.t) || (prevImg.targetPosition.z != f.targetPosition.z)) {
+		for (int i = 1; i <= v5s.getStackSize(); i++) {
+			if (v5s.getElement(i) == null) continue;
+			int[] targetPosition = v5s.convertIndexToPosition(i);
+			if ((!v5s.getElementFile(i).getName().equals(prevImg.getName())) || (prevTargetPosition[2] != targetPosition[2]) || (prevTargetPosition[1] != targetPosition[1])) {
 				if (img.hasChildNodes()) root.appendChild(img);
-				prevImg = f;
+				prevImg = v5s.getElementFile(i);
+				prevTargetPosition = targetPosition;
 				img = doc.createElement("image");
 				Element imgFilename = doc.createElement("filename");
 				Element imgZ = doc.createElement("z");
 				Element imgT = doc.createElement("t");
 				Element imgC = doc.createElement("c");
-
-				imgFilename.appendChild(doc.createTextNode(f.getPath().getName()));
-				imgZ.appendChild(doc.createTextNode(Integer.toString(f.getTargetPosition().getZ())));
-				imgT.appendChild(doc.createTextNode(Integer.toString(f.getTargetPosition().getT())));
-				imgC.appendChild(doc.createTextNode(Integer.toString(f.getSourcePosition().getC())));
-				imgC.setAttribute("id", Integer.toString(f.getTargetPosition().getC()));
+				imgFilename.appendChild(doc.createTextNode(v5s.getElementFile(i).getName()));
+				imgZ.appendChild(doc.createTextNode(Integer.toString(targetPosition[1])));
+				imgT.appendChild(doc.createTextNode(Integer.toString(targetPosition[2])));
+				imgC.appendChild(doc.createTextNode(Integer.toString(v5s.getSourcePosition(i)[0])));
+				imgC.setAttribute("id", Integer.toString(targetPosition[0]));
 				img.appendChild(imgFilename);
 				img.appendChild(imgZ);
 				img.appendChild(imgT);
 				img.appendChild(imgC);
 			} else {
 				Element imgC = doc.createElement("c");
-				imgC.appendChild(doc.createTextNode(Integer.toString(f.getSourcePosition().getC())));
-				imgC.setAttribute("id", Integer.toString(f.getTargetPosition().getC()));
+				imgC.appendChild(doc.createTextNode(Integer.toString(v5s.getSourcePosition(i)[0])));
+				imgC.setAttribute("id", Integer.toString(targetPosition[0]));
 				img.appendChild(imgC);
 			}
-
 		}
+
+		
 		if (img.hasChildNodes()) root.appendChild(img);
 
 		try {
@@ -129,10 +120,5 @@ public class V5sWriter {
 		} catch (IOException ioe) {
 			System.out.println(ioe.getMessage());
 		}
-
-
-
 	}
-
-
 }

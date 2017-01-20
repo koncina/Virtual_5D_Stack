@@ -1,7 +1,6 @@
 package eu.koncina.ij.V5S;
 
 import java.awt.BorderLayout;
-import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
@@ -18,22 +17,17 @@ import javax.swing.JFileChooser;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JSeparator;
-import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
-import javax.swing.SwingConstants;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
 import ij.IJ;
 import ij.gui.GenericDialog;
-import ij.io.OpenDialog;
-import ij.io.SaveDialog;
 import ij.plugin.frame.PlugInFrame;
 
 public class CreateV5s extends PlugInFrame {
+
+	private static final long serialVersionUID = 1L;
 
 	public CreateV5s() {
 		super("CreateV5s");
@@ -89,8 +83,10 @@ public class CreateV5s extends PlugInFrame {
 	// http://docs.oracle.com/javase/tutorial/uiswing/examples/components/ListDemoProject/src/components/ListDemo.java
 
 	public class FileList extends JPanel implements ListSelectionListener {
-		private JList list;
-		private DefaultListModel listModel;
+
+		private static final long serialVersionUID = 1L;
+		private JList<String> list;
+		private DefaultListModel<String> listModel;
 		private JFileChooser fc;
 		
 		
@@ -101,12 +97,12 @@ public class CreateV5s extends PlugInFrame {
 		public FileList() {
 			super(new BorderLayout());
 
-			listModel = new DefaultListModel();
+			listModel = new DefaultListModel<String>();
 
 			fc = new JFileChooser();
 			fc.setMultiSelectionEnabled(true);
 			//Create the list and put it in a scroll pane.
-			list = new JList(listModel);
+			list = new JList<String>(listModel);
 			list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
 			//list.setSelectedIndex(0);
 			list.addListSelectionListener(this);
@@ -160,8 +156,8 @@ public class CreateV5s extends PlugInFrame {
 
 		//This listener is shared by the text field and the hire button.
 		class addListener implements ActionListener {
-			private boolean alreadyEnabled = false;
-			private JButton button;
+			//private boolean alreadyEnabled = false;
+			//private JButton button;
 
 			//Required by ActionListener.
 			public void actionPerformed(ActionEvent e) {
@@ -203,11 +199,11 @@ public class CreateV5s extends PlugInFrame {
 			protected boolean alreadyInList(String name) {
 				return listModel.contains(name);
 			}
-			private void enableButton() {
-				if (!alreadyEnabled) {
-					button.setEnabled(true);
-				}
-			}
+//			private void enableButton() {
+//				if (!alreadyEnabled) {
+//					button.setEnabled(true);
+//				}
+//			}
 		}
 
 		//This method is required by ListSelectionListener.

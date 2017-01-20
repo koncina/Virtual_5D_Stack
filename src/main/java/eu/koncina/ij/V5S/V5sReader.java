@@ -22,7 +22,9 @@ import ij.IJ;
 
 public class V5sReader {
 	public Virtual5DStack loadFromXml(File f) {
-		Virtual5DStack v5s = new Virtual5DStack();
+		int width, height, channels, slices, frames;
+		String[] channelNames;
+		
 		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
 		DocumentBuilder dBuilder;
 		Document doc = null;
@@ -43,38 +45,40 @@ public class V5sReader {
 			Element info_element = (Element) doc.getElementsByTagName("info").item(0);
 			int version = Integer.parseInt(info_element.getElementsByTagName("version").item(0).getTextContent());
 			if (version > 1) IJ.error("The v5s file cannot be handled by this version of the plugin");
-			v5s.x = Integer.parseInt(info_element.getElementsByTagName("width").item(0).getTextContent());
-			v5s.y = Integer.parseInt(info_element.getElementsByTagName("height").item(0).getTextContent());
+			width = Integer.parseInt(info_element.getElementsByTagName("width").item(0).getTextContent());
+			height = Integer.parseInt(info_element.getElementsByTagName("height").item(0).getTextContent());
 
 			Element t_element = (Element) info_element.getElementsByTagName("frames").item(0);
-			v5s.t = t_element.getElementsByTagName("frame").getLength();
-			if (v5s.t == 0) v5s.t = Integer.parseInt(t_element.getTextContent());
+			frames = t_element.getElementsByTagName("frame").getLength();
+			if (frames == 0) frames = Integer.parseInt(t_element.getTextContent());
 
 			Element z_element = (Element) info_element.getElementsByTagName("slices").item(0);
-			v5s.z = z_element.getElementsByTagName("slice").getLength();
-			if (v5s.z == 0) v5s.z = Integer.parseInt(z_element.getTextContent());
+			slices = z_element.getElementsByTagName("slice").getLength();
+			if (slices == 0) slices = Integer.parseInt(z_element.getTextContent());
 
 			Element channels_element = (Element) info_element.getElementsByTagName("channels").item(0);
 			NodeList c_list = channels_element.getElementsByTagName("channel");
 
-			v5s.c = c_list.getLength();
+			channels = c_list.getLength();
 
-			for (int i = 0; i < v5s.c; i++) {
+			channelNames = new String[channels];
+
+			for (int i = 0; i < channels; i++) {
 				Element c_element = (Element) c_list.item(i);
 				int c_index = Integer.parseInt(c_element.getElementsByTagName("id").item(0).getTextContent());
+				if (c_index < 1 || c_index - 1 > channels) IJ.error("channel index is out of range");
 				String c_name = c_element.getElementsByTagName("name").item(0).getTextContent();
-				v5s.channels.put(c_index, c_name);
-			}
-
-			if (v5s.channels.keySet().size() != v5s.c) {
-				IJ.error("Bad channel information");
-				return null;
+				channelNames[c_index - 1] = c_name;
 			}
 
 		} catch (Exception e) {
 			IJ.error("Could not load Xml file informations");
 			return null;
 		}
+
+
+		Virtual5DStack v5s = new Virtual5DStack(width, height, channels, slices, frames);
+		v5s.setChannelNames(channelNames);
 
 		NodeList image_list = doc.getElementsByTagName("image");
 		for (int i = 0; i < image_list.getLength(); i++) {
@@ -91,23 +95,25 @@ public class V5sReader {
 					if (c_node.getNodeType() == Node.ELEMENT_NODE) {
 						Element c_element = (Element) c_node;
 						int c_pos = Integer.parseInt(c_element.getAttribute("id"));
-						v5s.addImage(new File(f.getParent(), filename),
-								new V5sPosition(Integer.parseInt(c_element.getTextContent()), 1, 1),
-								new V5sPosition(c_pos, z_pos, t_pos),
+						
+						
+						int[] srcPos = new int[]{Integer.parseInt(c_element.getTextContent()), 1, 1};
+						int[] stackPos = new int[]{c_pos, z_pos, t_pos};
+						v5s.setElement(new File(f.getParent(), filename), srcPos, stackPos,
 								Boolean.parseBoolean(image_element.getAttribute("flipHorizontal")),
 								Boolean.parseBoolean(image_element.getAttribute("flipVertical")));
 					}
 				}
 			}
 		}
-		v5s.file = f;
+
 		return v5s;	
 	}
 	
 	public Virtual5DStack loadFromTxt(File txtFile) {
 		int n = 0;
-		int t = 1;
-		int zOld = 0;
+		int nFrames;
+		int nSlices = 0;
 		
 		// This will reference one line at a time
 		String line = null;
@@ -126,20 +132,20 @@ public class V5sReader {
 				m += 1;
 			}
 			bufferedReader.close();
-			t = txtFileLines.length;
+			nFrames = txtFileLines.length;
 			for (int i = 0; i < txtFileLines.length; i++) {
 				if (txtFileLines[i] == null) {
-					t = t - 1;
+					nFrames = nFrames - 1;
 					continue;
 				}
 				String[] split = txtFileLines[i].split(";");
 				if (split.length == 0) {
-					t = t - 1;
-					if (t == 0) return null;
+					nFrames = nFrames - 1;
+					if (nFrames == 0) return null;
 					continue;
 				}
-				if (zOld != 0 && zOld != split.length) return null;
-				zOld = split.length;
+				if (nSlices != 0 && nSlices != split.length) return null;
+				nSlices = split.length;
 				for (int j = 0; j < split.length; j++) {
 					fileList.add(new File(txtFile.getParent(), split[j]));
 				}
@@ -148,13 +154,41 @@ public class V5sReader {
 			return null;
 		}
 		
-		Virtual5DStack v5s = new Virtual5DStack(fileList, fileList.size() / t, t, Virtual5DStack.xyczt);
-		for (int c = 1; c < v5s.c + 1; c++) {
-			v5s.channels.put(c, "channel " + c);
+		int[] dimMax = new int[3];
+		int[] dim = new int[3];
+		
+		for (int i = 0; i < fileList.size(); i++) {
+			if (fileList.get(i).getName().toLowerCase().equals("empty")) {
+				fileList.set(i, null);
+				continue;
+			}
+
+			dim = Virtual5DStack.getDimension(fileList.get(i));
+			if (dim[0] > dimMax[0])
+				dimMax[0] = dim[0];
+			if (dim[1] > dimMax[1])
+				dimMax[1] = dim[1];
+			if (dimMax[2] == 0) dimMax[2] = dim[2];
+			else if (dim[2] != dimMax[2]) throw new IllegalStateException();
+			
+			if (dim[3] > 1 || dim[4] > 1) throw new IllegalStateException("input file can only contain 1 frame and 1 slice"); // Old file format limitation.
+
 		}
 		
-		v5s.file = txtFile;
+		if (fileList.size() != nSlices * nFrames) throw new IllegalStateException("fileList.size() != nSlices * nFrames");
 		
+		Virtual5DStack v5s = new Virtual5DStack(dimMax[0], dimMax[1], dimMax[2], nSlices, nFrames);
+		
+		for (int i = 0; i < fileList.size(); i++) {
+			for (int j = 0; j < dim[2]; j++) {
+				v5s.setElement(fileList.get(i), new int[]{j + 1, 1, 1}, i * dimMax[2] + j + 1);
+			}
+		}
+		
+		
+		for (int c = 0; c < dimMax[2]; c++) {
+			v5s.setChannelName(c, "channel " + c);
+		}
 		return v5s;
 	}
 	
