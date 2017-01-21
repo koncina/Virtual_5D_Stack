@@ -3,6 +3,7 @@ package eu.koncina.ij.V5S;
 import ij.*;
 import ij.plugin.filter.PlugInFilter;
 import ij.process.*;
+import loci.formats.FormatException;
 import ij.plugin.CanvasResizer;
 import ij.gui.*;
 import ij.io.SaveDialog;
@@ -10,6 +11,7 @@ import ij.io.SaveDialog;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 
 import eu.koncina.ij.V5S.Virtual5DStack.V5sElement;
@@ -164,7 +166,7 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 
 		montage.updateAndRepaintWindow();		
 	}
-
+	
 	public int[] getGridPosition(int mouseX, int mouseY) {
 		int col = 0;
 		if (mouseX < 0) col = -1;
@@ -249,7 +251,13 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 	@Override
 	public void imageClosed(ImagePlus imp) {
 		if (imp.getID() == this.montage.getID()) {
-			IJ.log("Montage closed");
+			//IJ.log("Montage closed");
+			try {
+				this.imp = v5s.load(); // Would be more efficient to move the slices in imp
+									   // instead of reloading from scratch...
+			} catch (Exception e) {
+				IJ.error("Could not reload V5s");
+			}
 			this.imp.show();
 			SaveDialog sd = new SaveDialog("Save V5S", "untitled", ".v5s");  
 			V5sWriter v5sw  = new V5sWriter();

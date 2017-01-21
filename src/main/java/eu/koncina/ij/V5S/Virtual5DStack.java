@@ -190,6 +190,25 @@ public class Virtual5DStack {
 		}
 	}
 
+	public void delSlice(int n) {
+		if (n < 1 || n > nElements)
+			throw new IllegalArgumentException("n out of range: " + n);
+		int nC = getNChannels();
+		int nZ = getNSlices();
+		int nT = getNFrames();
+		nElements = nElements - nC * nT;
+		int shift = 0;
+		int delPos = nC * (n - 1);
+		for (int i = 0; i < nElements; i++) {
+			if (i == delPos) {
+				delPos = delPos + nC * (nZ - 1);
+				shift = shift + nC;
+			}
+			elements[i] = elements[i + shift];
+		}
+		dimension[3] = dimension[3] - 1;
+	}
+	
 	public void addSlice(int n) {
 		int nC = getNChannels();
 		int nT = getNFrames();
@@ -200,18 +219,21 @@ public class Virtual5DStack {
 
 		int size = elements.length;
 		V5sElement[] tmp;
-		if (nElements >= size) tmp = new V5sElement[nElements * 2];
-		else tmp = new V5sElement[size];	
+		if (nElements >= size) {
+			tmp = new V5sElement[nElements * 2];
+			System.arraycopy(elements, 0, tmp, 0, size);
+			elements = tmp;
+		}	
 		for (int i = nT; i > 0; i--) {
 			if (n == 0) start = getStackIndex(1, 1, i) - 1;
 			else start = getStackIndex(1, n, i) + nC - 1;
 			int shift = nC * i;
-			System.arraycopy(elements, start, tmp, start + shift, end - start);
+			for (int j = end - 1; j >= start ; j--) {
+				elements[j + shift] = elements[j];
+				elements[j] = null;
+			}
 			end = start;
 		}
-		// copying remaining elements
-		if (n > 0) System.arraycopy(elements, 0, tmp, 0, end);
-		elements = tmp;
 		dimension[3] = dimension[3] + 1;	
 	}
 
