@@ -190,8 +190,47 @@ public class Virtual5DStack {
 		}
 	}
 
+	public void delFrame(int n) {
+		if (n < 1 || n > getNFrames())
+			throw new IllegalArgumentException("n out of range: " + n);
+		int nC = getNChannels();
+		int nZ = getNSlices();
+		int nT = getNFrames();
+		nElements = nElements - nC * nZ;
+		int delPos = nC * nZ * (n - 1);
+		int shift = 0;
+		for (int i = 0; i < nElements; i++) {
+			if (i == delPos) shift = nC * nZ;
+			elements[i] = elements[i + shift];		
+		}
+		dimension[4] = dimension[4] - 1;
+	}
+	
+	public void addFrame(int n) {
+		if (n < 0 || n > getNFrames())
+			throw new IllegalArgumentException("n out of range: " + n);
+		int nC = getNChannels();
+		int nZ = getNSlices();
+		int nNewElements = nC * nZ;
+		int end = nElements;
+		nElements = nElements + nNewElements;
+		int size = elements.length;
+		if (nElements >= size) {
+			V5sElement[] tmp = new V5sElement[nElements * 2];
+			System.arraycopy(elements, 0, tmp, 0, size);
+			elements = tmp;
+		}
+		int addPos = nC * nZ * n;
+		for (int i = nElements - nNewElements; i >= addPos; i--) {
+			elements[i + nNewElements] = elements[i];
+			elements[i] = null;
+		}
+		dimension[4] = dimension[4] + 1;
+		
+	}
+	
 	public void delSlice(int n) {
-		if (n < 1 || n > nElements)
+		if (n < 1 || n > getNSlices())
 			throw new IllegalArgumentException("n out of range: " + n);
 		int nC = getNChannels();
 		int nZ = getNSlices();
@@ -212,18 +251,17 @@ public class Virtual5DStack {
 	public void addSlice(int n) {
 		int nC = getNChannels();
 		int nT = getNFrames();
-		int nNewSlices = nC * nT;
+		int nNewElements = nC * nT;
 		int end = nElements;
 		int start;
-		nElements = nElements + nNewSlices;
+		nElements = nElements + nNewElements;
 
 		int size = elements.length;
-		V5sElement[] tmp;
 		if (nElements >= size) {
-			tmp = new V5sElement[nElements * 2];
+			V5sElement[] tmp = new V5sElement[nElements * 2];
 			System.arraycopy(elements, 0, tmp, 0, size);
 			elements = tmp;
-		}	
+		}
 		for (int i = nT; i > 0; i--) {
 			if (n == 0) start = getStackIndex(1, 1, i) - 1;
 			else start = getStackIndex(1, n, i) + nC - 1;
