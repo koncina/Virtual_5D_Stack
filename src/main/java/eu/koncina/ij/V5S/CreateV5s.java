@@ -23,9 +23,12 @@ import javax.swing.event.ListSelectionListener;
 
 import ij.IJ;
 import ij.gui.GenericDialog;
+import ij.io.SaveDialog;
 import ij.plugin.frame.PlugInFrame;
 
 public class CreateV5s extends PlugInFrame {
+
+	JPanel listPanel;
 
 	private static final long serialVersionUID = 1L;
 
@@ -42,12 +45,12 @@ public class CreateV5s extends PlugInFrame {
 		if (gd.wasCanceled())
 			return;
 
-		gd.getNextChoice();
+		String byDim = gd.getNextChoice();
 		int size = (int) gd.getNextNumber();
-		
+
 		this.setSize(500, 300);
 
-		JPanel listPanel = new JPanel();
+		listPanel = new JPanel();
 		listPanel.setLayout(new GridLayout(0, size));
 
 		for (int i = 0; i < size; i++) {
@@ -68,17 +71,84 @@ public class CreateV5s extends PlugInFrame {
 		this.setVisible(true);
 	}
 
+	private int getNList() {
+		return listPanel.getComponentCount();
+	}
+
+	private String[] getListContent(int n) {
+		if (n < 0 || n > listPanel.getComponentCount())
+			throw new IllegalArgumentException("n out of range: " + n);
+		FileList fl  = (FileList) listPanel.getComponent(n);
+		return fl.getContent();	
+	}
+
+	private int getMaxListCount() {
+		int count = 0;
+		for (int i = 0; i < listPanel.getComponentCount();  i++) {
+			int n = getListContent(i).length;
+			if (count < n) count = n;
+		}
+		return count;	
+	}
+
+
+	public void createV5s() {
+		int width = 1;
+		int height = 1;
+		int nC = 0;
+		int nT = listPanel.getComponentCount();
+		int nZ = getMaxListCount();
+
+		for (int i = 0; i < nT;  i++) {
+			String[] fl = getListContent(i);
+			for (String s : fl) {
+				File f = new File(s);
+				int[] dim = Virtual5DStack.getDimension(f);
+				if (dim[0] > width) width = dim[0];
+				if (dim[1] > height) height = dim[1];
+				if (nC == 0) nC = dim[2];
+				else if (dim[2] != nC) throw new IllegalStateException("The generator accepts only images with the same number of channels");
+				if (dim[3] > 1 || dim[4] > 1) throw new IllegalStateException("The generator accepts only images with 1 frame and 1 slice");
+			}
+		}
+
+		Virtual5DStack v5s = new Virtual5DStack(width, height, nC, nZ, nT);
+		for (int i = 0; i < nT;  i++) {
+			String[] fl = getListContent(i);
+
+			for (int j = 0;  j < fl.length; j++) {
+				File f = new File(fl[j]);
+				for (int k = 0; k < nC; k++) {
+					v5s.setElement(f, new int[]{k + 1, 1, 1}, new int[]{k + 1, j, i});
+				}		
+			}
+		}
+
+		SaveDialog sd = new SaveDialog("Save V5S", "untitled", ".v5s");
+
+		V5sWriter v5sW  = new V5sWriter();
+
+		try {
+			v5sW.writeXml(v5s, new File(sd.getDirectory(), sd.getFileName()));
+		} catch (Exception e) {
+			IJ.error("Could not generate v5s file...");
+		}
+	}
+
+
+
 	class createListener implements ActionListener {
 		public void actionPerformed(ActionEvent e) {
 			IJ.log("create");
+			createV5s();
 			CloseFrame();
 		}
 	}
 
 	public void CloseFrame(){
-	    super.dispose();
+		super.dispose();
 	}
-	
+
 	// Adapted from the ListDemo example
 	// http://docs.oracle.com/javase/tutorial/uiswing/examples/components/ListDemoProject/src/components/ListDemo.java
 
@@ -88,8 +158,8 @@ public class CreateV5s extends PlugInFrame {
 		private JList<String> list;
 		private DefaultListModel<String> listModel;
 		private JFileChooser fc;
-		
-		
+
+
 		private static final String addString = "+";
 		private static final String rmString = "-";
 		private JButton rmBtn;
@@ -132,17 +202,21 @@ public class CreateV5s extends PlugInFrame {
 			add(buttonPane, BorderLayout.PAGE_END);
 		}
 
+
+		public String[] getContent() {
+			int size = listModel.size();
+			String[] l = new String[size];
+			for (int i = 0; i < size; i++) {
+				l[i] = listModel.get(i);
+			}
+			return l;
+		}
+
 		class rmListener implements ActionListener {
 			public void actionPerformed(ActionEvent e) {
-				//This method can be called only if
-				//there's a valid selection
-				//so go ahead and remove whatever's selected.
-				
 				for (int i : list.getSelectedIndices()) {
 					listModel.remove(i);
 				}
-						
-
 				int size = listModel.getSize();
 
 				if (size == 0) {
@@ -161,32 +235,32 @@ public class CreateV5s extends PlugInFrame {
 
 			//Required by ActionListener.
 			public void actionPerformed(ActionEvent e) {
-				
+
 				int index = list.getSelectedIndex();
-//				if (index == -1) { //no selection, so insert at beginning
-//					index = 0;
-//				} else {           //add after the selected item
-//					index++;
-//				}
+				//				if (index == -1) { //no selection, so insert at beginning
+				//					index = 0;
+				//				} else {           //add after the selected item
+				//					index++;
+				//				}
 				int returnVal = fc.showOpenDialog(CreateV5s.this);
-				 
-	            if (returnVal == JFileChooser.APPROVE_OPTION) {
-	            	
-	            	for (File f : fc.getSelectedFiles()) {
 
-	            		if (f.getName().equals("") || alreadyInList(f.getName())) {
-	    					Toolkit.getDefaultToolkit().beep();
-	    					continue;
-	    				}
-	            		index++;
-	            		listModel.insertElementAt(f.getName(), index);
-	            		
-	            	}
-	            } 			
-				
-	
+				if (returnVal == JFileChooser.APPROVE_OPTION) {
 
-				
+					for (File f : fc.getSelectedFiles()) {
+
+						if (f.getName().equals("") || alreadyInList(f.getName())) {
+							Toolkit.getDefaultToolkit().beep();
+							continue;
+						}
+						index++;
+						listModel.insertElementAt(f.getName(), index);
+
+					}
+				} 			
+
+
+
+
 
 				//Select the new item and make it visible.
 				list.setSelectedIndex(index);
@@ -199,11 +273,11 @@ public class CreateV5s extends PlugInFrame {
 			protected boolean alreadyInList(String name) {
 				return listModel.contains(name);
 			}
-//			private void enableButton() {
-//				if (!alreadyEnabled) {
-//					button.setEnabled(true);
-//				}
-//			}
+			//			private void enableButton() {
+			//				if (!alreadyEnabled) {
+			//					button.setEnabled(true);
+			//				}
+			//			}
 		}
 
 		//This method is required by ListSelectionListener.
