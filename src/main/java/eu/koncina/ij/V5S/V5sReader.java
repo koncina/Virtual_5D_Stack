@@ -95,8 +95,6 @@ public class V5sReader {
 					if (c_node.getNodeType() == Node.ELEMENT_NODE) {
 						Element c_element = (Element) c_node;
 						int c_pos = Integer.parseInt(c_element.getAttribute("id"));
-						
-						
 						int[] srcPos = new int[]{Integer.parseInt(c_element.getTextContent()), 1, 1};
 						int[] stackPos = new int[]{c_pos, z_pos, t_pos};
 						v5s.setElement(new File(f.getParent(), filename), srcPos, stackPos,
@@ -106,7 +104,7 @@ public class V5sReader {
 				}
 			}
 		}
-
+		v5s.setName(f.getName().replace(".v5s", ""));
 		return v5s;	
 	}
 	
@@ -119,7 +117,6 @@ public class V5sReader {
 		String line = null;
 		List<File> fileList = new ArrayList<File>();
 
-		//String title = txtFile.getName().replace(".v5s", "");
 		int m = 0;
 		try {
 			n = countLines(txtFile);
@@ -185,10 +182,7 @@ public class V5sReader {
 			}
 		}
 		
-		
-		for (int c = 0; c < dimMax[2]; c++) {
-			v5s.setChannelName(c, "channel " + c);
-		}
+		v5s.setName(txtFile.getName().replace(".v5s", ""));
 		return v5s;
 	}
 	

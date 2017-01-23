@@ -6,6 +6,7 @@ import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.io.IOException;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -25,10 +26,12 @@ import ij.IJ;
 import ij.gui.GenericDialog;
 import ij.io.SaveDialog;
 import ij.plugin.frame.PlugInFrame;
+import loci.formats.FormatException;
 
 public class CreateV5s extends PlugInFrame {
 
 	JPanel listPanel;
+	File folder;
 
 	private static final long serialVersionUID = 1L;
 
@@ -92,17 +95,35 @@ public class CreateV5s extends PlugInFrame {
 	}
 
 
-	public void createV5s() {
+	public Virtual5DStack createV5s() {
 		int width = 1;
 		int height = 1;
 		int nC = 0;
 		int nT = listPanel.getComponentCount();
 		int nZ = getMaxListCount();
 
+		if (nZ == 0) return null;
+		
+//		SaveDialog sd = new SaveDialog("Save V5S", "untitled", ".v5s");
+//		String path = sd.getDirectory();
+//		if (path == null)
+//			return; // Dialog was cancelled
+//		path = path.replace('\\', '/'); // MS Windows safe
+//		if (!path.endsWith("/"))
+//			path += "/";
+//		
+//		if (path == null)
+//			return;
+//		
+//		if (!folder.equals(new File(path))) {
+//			IJ.error("The v5s file should be located within the same folder");
+//			return;
+//		}
+		
 		for (int i = 0; i < nT;  i++) {
 			String[] fl = getListContent(i);
 			for (String s : fl) {
-				File f = new File(s);
+				File f = new File(folder, s);
 				int[] dim = Virtual5DStack.getDimension(f);
 				if (dim[0] > width) width = dim[0];
 				if (dim[1] > height) height = dim[1];
@@ -117,36 +138,43 @@ public class CreateV5s extends PlugInFrame {
 			String[] fl = getListContent(i);
 
 			for (int j = 0;  j < fl.length; j++) {
-				File f = new File(fl[j]);
+				File f = new File(folder, fl[j]);
 				for (int k = 0; k < nC; k++) {
-					v5s.setElement(f, new int[]{k + 1, 1, 1}, new int[]{k + 1, j, i});
+					v5s.setElement(f, new int[]{k + 1, 1, 1}, new int[]{k + 1, j + 1, i + 1});
 				}		
 			}
 		}
-
-		SaveDialog sd = new SaveDialog("Save V5S", "untitled", ".v5s");
-
-		V5sWriter v5sW  = new V5sWriter();
-
-		try {
-			v5sW.writeXml(v5s, new File(sd.getDirectory(), sd.getFileName()));
-		} catch (Exception e) {
-			IJ.error("Could not generate v5s file...");
-		}
+	
+//		v5s.setName(sd.getFileName().replace(".v5s", ""));
+//		V5sWriter v5sW  = new V5sWriter();
+//		try {
+//			v5sW.writeXml(v5s, new File(folder, sd.getFileName()));
+//		} catch (Exception e) {
+//			IJ.error("Could not generate v5s file...");
+//		}
+		
+		return v5s;
 	}
-
-
 
 	class createListener implements ActionListener {
 		public void actionPerformed(ActionEvent e) {
-			IJ.log("create");
-			createV5s();
+			Virtual5DStack v5s = createV5s();
+			if (v5s == null) return;
+			try {
+				v5s.load().show();
+			} catch (Exception e1) {
+				IJ.error("Could not generate Virtual 5D Stack");
+			}
 			CloseFrame();
 		}
 	}
 
 	public void CloseFrame(){
 		super.dispose();
+	}
+	
+	public void setFolder(File f) {
+		if (folder == null) folder = f;
 	}
 
 	// Adapted from the ListDemo example
@@ -159,7 +187,6 @@ public class CreateV5s extends PlugInFrame {
 		private DefaultListModel<String> listModel;
 		private JFileChooser fc;
 
-
 		private static final String addString = "+";
 		private static final String rmString = "-";
 		private JButton rmBtn;
@@ -168,6 +195,7 @@ public class CreateV5s extends PlugInFrame {
 			super(new BorderLayout());
 
 			listModel = new DefaultListModel<String>();
+
 
 			fc = new JFileChooser();
 			fc.setMultiSelectionEnabled(true);
@@ -202,7 +230,6 @@ public class CreateV5s extends PlugInFrame {
 			add(buttonPane, BorderLayout.PAGE_END);
 		}
 
-
 		public String[] getContent() {
 			int size = listModel.size();
 			String[] l = new String[size];
@@ -213,6 +240,7 @@ public class CreateV5s extends PlugInFrame {
 		}
 
 		class rmListener implements ActionListener {
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				for (int i : list.getSelectedIndices()) {
 					listModel.remove(i);
@@ -228,66 +256,41 @@ public class CreateV5s extends PlugInFrame {
 			}
 		}
 
-		//This listener is shared by the text field and the hire button.
 		class addListener implements ActionListener {
-			//private boolean alreadyEnabled = false;
-			//private JButton button;
-
-			//Required by ActionListener.
+			@Override
 			public void actionPerformed(ActionEvent e) {
 
 				int index = list.getSelectedIndex();
-				//				if (index == -1) { //no selection, so insert at beginning
-				//					index = 0;
-				//				} else {           //add after the selected item
-				//					index++;
-				//				}
 				int returnVal = fc.showOpenDialog(CreateV5s.this);
 
 				if (returnVal == JFileChooser.APPROVE_OPTION) {
-
+					
+					setFolder(fc.getCurrentDirectory());
 					for (File f : fc.getSelectedFiles()) {
-
-						if (f.getName().equals("") || alreadyInList(f.getName())) {
+						if (!f.getParentFile().equals(folder) || f.getName().equals("") || alreadyInList(f.getName())) {
 							Toolkit.getDefaultToolkit().beep();
 							continue;
 						}
 						index++;
 						listModel.insertElementAt(f.getName(), index);
-
 					}
 				} 			
 
-
-
-
-
-				//Select the new item and make it visible.
 				list.setSelectedIndex(index);
 				list.ensureIndexIsVisible(index);
 			}
 
-			//This method tests for string equality. You could certainly
-			//get more sophisticated about the algorithm.  For example,
-			//you might want to ignore white space and capitalization.
 			protected boolean alreadyInList(String name) {
 				return listModel.contains(name);
 			}
-			//			private void enableButton() {
-			//				if (!alreadyEnabled) {
-			//					button.setEnabled(true);
-			//				}
-			//			}
 		}
 
-		//This method is required by ListSelectionListener.
+		@Override
 		public void valueChanged(ListSelectionEvent e) {
 			if (e.getValueIsAdjusting() == false) {
 				if (list.getSelectedIndex() == -1) {
-					//No selection, disable fire button.
 					rmBtn.setEnabled(false);
 				} else {
-					//Selection, enable the fire button.
 					rmBtn.setEnabled(true);
 				}
 			}

@@ -25,6 +25,8 @@ public class Virtual5DStack {
 	// Arrays with a size of nSlices	
 	private V5sElement[] elements;
 
+	private String name;
+
 	private int[] dimension;
 	private int nElements;
 
@@ -35,14 +37,23 @@ public class Virtual5DStack {
 	public Virtual5DStack() {
 	}
 
-	public Virtual5DStack(int width, int height, int nChannels, int nSlices, int nFrames) {
+	public Virtual5DStack(int width, int height, int nChannels, int nSlices, int nFrames, String name) {
 		dimension = new int[] {width, height, nChannels, nSlices, nFrames};
 		nElements = nChannels * nSlices * nFrames;
 		elements = new V5sElement[nElements];
 		channelNames = channelDescriptions = new String[nChannels];
 		channelStates = new boolean[nChannels];
+		this.name = name;
+		for (int c = 0; c < nChannels; c++) {
+			setChannelName(c, "channel " + (c + 1));
+			setChannelState(c, true);
+		}
 	}  
 
+	public Virtual5DStack(int width, int height, int nChannels, int nSlices, int nFrames) {
+		this(width, height, nChannels, nSlices, nFrames, "New");
+	}
+	
 	/** Returns that stack index (one-based) corresponding to the specified position.
 	    adapted from ImagePlus.java: it is not necessary to create an imp object for this. 
 	    and we will throw exceptions if arguments are out of range */
@@ -57,19 +68,6 @@ public class Virtual5DStack {
 		return (frame - 1) * dimension[2] * dimension[3] + (slice-1) * dimension[2] + channel;
 	}
 
-	//	/** Returns that stack index (one-based) corresponding to the specified position.
-	//    adapted from ImagePlus.java: it is not necessary to create an imp object for this. */
-	//public int getStackIndex(int channel, int slice, int frame) {	
-	//	if (channel < 1) channel = 1;
-	//	if (channel > dimension[2]) channel = dimension[2];
-	//	if (slice < 1) slice = 1;
-	//	if (slice > dimension[3]) slice = dimension[3];
-	//	if (frame < 1) frame = 1;
-	//	if (frame > dimension[4]) frame = dimension[4];
-	//
-	//	return (frame - 1) * dimension[2] * dimension[3] + (slice-1) * dimension[2] + channel;
-	//}
-
 	/** Converts the stack index 'n' (one-based) into a hyperstack position (channel, slice, frame).
 	    from the ImagePlus class */
 	public int[] convertIndexToPosition(int n) {
@@ -80,6 +78,10 @@ public class Virtual5DStack {
 		position[1] = (((n - 1) / dimension[2]) % dimension[3]) + 1;
 		position[2] = (((n - 1) / (dimension[2] * dimension[3])) % dimension[4]) + 1;
 		return position;
+	}
+	
+	public String getName() {
+		return name;
 	}
 
 	public int getWidth() {
@@ -176,6 +178,10 @@ public class Virtual5DStack {
 		}
 		return subElements;
 	}
+	
+	public void setName(String name) {
+		this.name = name;
+	}
 
 	public void setElementsC(V5sElement[] subElements, int slice, int frame) {
 		if (slice < 1 || slice > getNSlices())
@@ -205,7 +211,7 @@ public class Virtual5DStack {
 		}
 		dimension[4] = dimension[4] - 1;
 	}
-	
+
 	public void addFrame(int n) {
 		if (n < 0 || n > getNFrames())
 			throw new IllegalArgumentException("n out of range: " + n);
@@ -226,9 +232,9 @@ public class Virtual5DStack {
 			elements[i] = null;
 		}
 		dimension[4] = dimension[4] + 1;
-		
+
 	}
-	
+
 	public void delSlice(int n) {
 		if (n < 1 || n > getNSlices())
 			throw new IllegalArgumentException("n out of range: " + n);
@@ -247,7 +253,7 @@ public class Virtual5DStack {
 		}
 		dimension[3] = dimension[3] - 1;
 	}
-	
+
 	public void addSlice(int n) {
 		int nC = getNChannels();
 		int nT = getNFrames();
@@ -353,7 +359,7 @@ public class Virtual5DStack {
 		imp.setDimensions(dimension[2], dimension[3], dimension[4]);
 		imp = new CompositeImage(imp, 1);
 		imp.setOpenAsHyperStack(true);
-		//imp.setTitle(this.file.getName());
+		imp.setTitle(name);
 		imp.setProperty("v5s", this);
 		ImagePlus.setDefault16bitRange(16);
 		IJ.showStatus("");
