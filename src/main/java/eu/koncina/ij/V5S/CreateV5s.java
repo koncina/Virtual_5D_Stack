@@ -40,7 +40,7 @@ public class CreateV5s extends PlugInFrame {
 	public void run(String arg) {
 		GenericDialog gd = new GenericDialog("Frames and slices");
 		gd.addChoice("dimension", new String[] {"z", "t"},  "t");
-		gd.addNumericField("size", 1, 2);
+		gd.addNumericField("size", 1, 0);
 
 		gd.showDialog();
 		if (gd.wasCanceled())
