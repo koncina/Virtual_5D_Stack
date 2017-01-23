@@ -6,7 +6,6 @@ import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
-import java.io.IOException;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -24,14 +23,13 @@ import javax.swing.event.ListSelectionListener;
 
 import ij.IJ;
 import ij.gui.GenericDialog;
-import ij.io.SaveDialog;
 import ij.plugin.frame.PlugInFrame;
-import loci.formats.FormatException;
 
 public class CreateV5s extends PlugInFrame {
 
 	JPanel listPanel;
 	File folder;
+	String byDim;
 
 	private static final long serialVersionUID = 1L;
 
@@ -48,7 +46,7 @@ public class CreateV5s extends PlugInFrame {
 		if (gd.wasCanceled())
 			return;
 
-		String byDim = gd.getNextChoice();
+		byDim = gd.getNextChoice();
 		int size = (int) gd.getNextNumber();
 
 		this.setSize(500, 300);
@@ -74,10 +72,6 @@ public class CreateV5s extends PlugInFrame {
 		this.setVisible(true);
 	}
 
-	private int getNList() {
-		return listPanel.getComponentCount();
-	}
-
 	private String[] getListContent(int n) {
 		if (n < 0 || n > listPanel.getComponentCount())
 			throw new IllegalArgumentException("n out of range: " + n);
@@ -99,11 +93,20 @@ public class CreateV5s extends PlugInFrame {
 		int width = 1;
 		int height = 1;
 		int nC = 0;
-		int nT = listPanel.getComponentCount();
-		int nZ = getMaxListCount();
-
-		if (nZ == 0) return null;
+		int nT;
+		int nZ;
+		int nLists = listPanel.getComponentCount();
 		
+
+		if (byDim == "t") {
+			nT = nLists;
+			nZ = getMaxListCount();
+		} else {
+			nZ = nLists;
+			nT = getMaxListCount();
+		}
+		
+		if (nZ == 0 || nT == 0) return null;
 //		SaveDialog sd = new SaveDialog("Save V5S", "untitled", ".v5s");
 //		String path = sd.getDirectory();
 //		if (path == null)
@@ -120,7 +123,7 @@ public class CreateV5s extends PlugInFrame {
 //			return;
 //		}
 		
-		for (int i = 0; i < nT;  i++) {
+		for (int i = 0; i < nLists;  i++) {
 			String[] fl = getListContent(i);
 			for (String s : fl) {
 				File f = new File(folder, s);
@@ -134,13 +137,17 @@ public class CreateV5s extends PlugInFrame {
 		}
 
 		Virtual5DStack v5s = new Virtual5DStack(width, height, nC, nZ, nT);
-		for (int i = 0; i < nT;  i++) {
+		for (int i = 0; i < nLists;  i++) {
 			String[] fl = getListContent(i);
 
 			for (int j = 0;  j < fl.length; j++) {
 				File f = new File(folder, fl[j]);
 				for (int k = 0; k < nC; k++) {
-					v5s.setElement(f, new int[]{k + 1, 1, 1}, new int[]{k + 1, j + 1, i + 1});
+					if (byDim == "t") {
+						v5s.setElement(f, new int[]{k + 1, 1, 1}, new int[]{k + 1, j + 1, i + 1});
+					} else {
+						v5s.setElement(f, new int[]{k + 1, 1, 1}, new int[]{k + 1, i + 1, j + 1});
+					}
 				}		
 			}
 		}

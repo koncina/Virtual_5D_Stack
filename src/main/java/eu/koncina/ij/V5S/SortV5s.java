@@ -3,7 +3,6 @@ package eu.koncina.ij.V5S;
 import ij.*;
 import ij.plugin.filter.PlugInFilter;
 import ij.process.*;
-import loci.formats.FormatException;
 import ij.plugin.CanvasResizer;
 import ij.gui.*;
 import ij.io.SaveDialog;
@@ -11,8 +10,9 @@ import ij.io.SaveDialog;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
-import java.io.IOException;
 import java.util.*;
+
+import javax.swing.JOptionPane;
 
 import eu.koncina.ij.V5S.Virtual5DStack.V5sElement;
 
@@ -136,20 +136,20 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 	}
 
 	public void swapCells(int p1, int p2, int frame) {
-		int cellWidth = montage.getWidth() / this.gridX;
+		int cellWidth = montage.getWidth() / gridX;
 		int nC = montage.getNChannels();
 		
 		if (p2 <= 0) {
 			CanvasResizer cr = new CanvasResizer();
-			this.montage.setStack(null, cr.expandStack(montage.getStack(), montage.getWidth() + cellWidth, montage.getHeight(), cellWidth, 0));
-			this.gridX = this.gridX + 1;
+			montage.setStack(null, cr.expandStack(montage.getStack(), montage.getWidth() + cellWidth, montage.getHeight(), cellWidth, 0));
+			gridX = gridX + 1;
 			v5s.addSlice(0);
 			p1++;
 			p2 = 1;
-		} else if (p2 > this.gridX) {
+		} else if (p2 > gridX) {
 			CanvasResizer cr = new CanvasResizer();
-			this.montage.setStack(null, cr.expandStack(montage.getStack(), montage.getWidth() + cellWidth, montage.getHeight(), 0, 0));
-			this.gridX = this.gridX + 1;
+			montage.setStack(null, cr.expandStack(montage.getStack(), montage.getWidth() + cellWidth, montage.getHeight(), 0, 0));
+			gridX++;
 			v5s.addSlice();
 		}
 				
@@ -158,20 +158,43 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 			montage.getStack().getProcessor(c + 1).insert(sourceCell.getProcessor(c + 1), (int) (p2 - 1) * montage.getWidth() / gridX, (int) (frame - 1) * montage.getHeight() / gridY);
 			montage.getStack().getProcessor(c + 1).insert(targetCell.getProcessor(c + 1), (int) (p1 - 1) * montage.getWidth() / gridX, (int) (frame - 1) * montage.getHeight() / gridY);
 		}
-				
+		
 		// array representing the slice (with c * t dimensions)
 		V5sElement[] tempElements = v5s.getElementsC(p1, frame);
 		v5s.setElementsC(v5s.getElementsC(p2, frame) , p1, frame);
 		v5s.setElementsC(tempElements , p2, frame);
 
-		montage.updateAndRepaintWindow();		
+		montage.updateAndRepaintWindow();
+	}
+	
+	public void rmCells(int p) {
+		if (!v5s.isSliceEmpty(p)) {
+			int dialogButton = JOptionPane.YES_NO_OPTION;
+			int dialogResult = JOptionPane.showConfirmDialog (null, "Slice is not empty. Would you really like to remove the slice?", "Warning", dialogButton);
+			if (dialogResult == JOptionPane.NO_OPTION) return;
+		}
+			
+		int cellWidth = montage.getWidth() / gridX;
+		for (int c = 0; c < montage.getNChannels(); c++) {
+			ImageProcessor ip = montage.getStack().getProcessor(c + 1);
+			ip.setRoi(p * cellWidth, 0, montage.getWidth() - (p * cellWidth), montage.getHeight());
+			ip.insert(ip.crop(), (int) (p - 1) * cellWidth, 0);
+		}
+		
+		CanvasResizer cr = new CanvasResizer();
+		this.montage.setStack(null, cr.expandStack(montage.getStack(), montage.getWidth() - cellWidth, montage.getHeight(), 0, 0));
+		v5s.delSlice(p);
+		gridX--;
+		montage.updateAndRepaintWindow();
 	}
 	
 	public int[] getGridPosition(int mouseX, int mouseY) {
 		int col = 0;
+		int row = 0;
 		if (mouseX < 0) col = -1;
 		else col = (int) Math.floor(mouseX / (montage.getWidth() / gridX)) + 1;
-		int row = (int) Math.floor(mouseY / (montage.getHeight() / gridY)) + 1;
+		if (mouseY < 0) row = -1;
+		else row = (int) Math.floor(mouseY / (montage.getHeight() / gridY)) + 1;
 		return new int[]{col, row};
 	}
 
@@ -209,11 +232,11 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 		int x = e.getX();
 		int y = e.getY();
 		int[] gridTarget = getGridPosition(canvas.offScreenX(x), canvas.offScreenY(y));
-		if (gridStart[1] != gridTarget[1]) {
-			IJ.log("only slices can be swapped (same frame)");
-		} else if (gridStart[0] != gridTarget[0]) {
+		if (gridStart[0] != gridTarget[0] && gridStart[1] == gridTarget[1]) {
 			swapCells(gridStart[0], gridTarget[0], gridStart[1]);
-		}		
+		} else if (gridTarget[1] < 0 || gridTarget[1] > gridY) {
+			rmCells(gridStart[0]);
+		}
 	}
 
 	public void mouseDragged(MouseEvent e) {

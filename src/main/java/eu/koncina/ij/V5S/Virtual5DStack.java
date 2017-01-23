@@ -53,7 +53,7 @@ public class Virtual5DStack {
 	public Virtual5DStack(int width, int height, int nChannels, int nSlices, int nFrames) {
 		this(width, height, nChannels, nSlices, nFrames, "New");
 	}
-	
+
 	/** Returns that stack index (one-based) corresponding to the specified position.
 	    adapted from ImagePlus.java: it is not necessary to create an imp object for this. 
 	    and we will throw exceptions if arguments are out of range */
@@ -79,7 +79,7 @@ public class Virtual5DStack {
 		position[2] = (((n - 1) / (dimension[2] * dimension[3])) % dimension[4]) + 1;
 		return position;
 	}
-	
+
 	public String getName() {
 		return name;
 	}
@@ -178,7 +178,30 @@ public class Virtual5DStack {
 		}
 		return subElements;
 	}
-	
+
+	public boolean isEmpty(int channel, int slice, int frame) {
+		if (elements[getStackIndex(channel, slice, frame) - 1] == null) return true;
+		return false;
+	}
+
+	public boolean isSliceEmpty(int slice) {
+		for (int i = 0; i < getNFrames(); i++) {
+			for (int j = 0; j < getNChannels(); j++) {
+				if (elements[getStackIndex(j + 1, slice, i + 1) - 1] != null) return false;
+			}
+		}
+		return true;
+	}
+
+	public boolean isFrameEmpty(int frame) {
+		for (int i = 0; i < getNSlices(); i++) {
+			for (int j = 0; j < getNChannels(); j++) {
+				if (elements[getStackIndex(j + 1, i + 1, frame) - 1] != null) return false;
+			}
+		}
+		return true;
+	}	
+
 	public void setName(String name) {
 		this.name = name;
 	}
@@ -201,7 +224,6 @@ public class Virtual5DStack {
 			throw new IllegalArgumentException("n out of range: " + n);
 		int nC = getNChannels();
 		int nZ = getNSlices();
-		int nT = getNFrames();
 		nElements = nElements - nC * nZ;
 		int delPos = nC * nZ * (n - 1);
 		int shift = 0;
@@ -218,7 +240,6 @@ public class Virtual5DStack {
 		int nC = getNChannels();
 		int nZ = getNSlices();
 		int nNewElements = nC * nZ;
-		int end = nElements;
 		nElements = nElements + nNewElements;
 		int size = elements.length;
 		if (nElements >= size) {
