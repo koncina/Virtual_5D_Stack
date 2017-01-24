@@ -80,8 +80,45 @@ public class Virtual5DStack {
 		return position;
 	}
 
+	public String guessName() {
+		String guessedName = null;
+		int minLength = 0;
+		for (int i = 0; i < elements.length; i++) {
+			if (elements[i] == null) continue;
+			int tmpLength = elements[i].getName().length();
+			if (minLength == 0) minLength = tmpLength;
+			if (tmpLength < minLength) minLength = tmpLength;
+		}
+
+		for (int i = 0; i < elements.length; i++) {
+			if (elements[i] == null) continue;
+			String tmpName = elements[i].getName();
+			if (guessedName == null) guessedName = tmpName;
+			int x = 0;
+			while (guessedName.charAt(x) == tmpName.charAt(x)) {
+				x++;
+				if ((x >= guessedName.length()) || (x >= tmpName.length())) break;
+			}
+			if (x == 0) return "Untitled";
+			guessedName = guessedName.substring(0, x);
+		}
+		return guessedName;
+	}
+
 	public String getName() {
 		return name;
+	}
+	
+	public String getFolder() {
+		String folder = null;
+		for (int i =0; i < elements.length; i++) {
+			if (elements[i] == null) continue;
+			if (folder == null) folder = elements[i].getFile().getParent();
+			if (!folder.equals(elements[i].getFile().getParent())) {
+				IJ.error("An error occured: v5s must be located in a same folder");
+			}
+		}
+		return folder;
 	}
 
 	public int getWidth() {
@@ -229,10 +266,12 @@ public class Virtual5DStack {
 		int shift = 0;
 		for (int i = 0; i < nElements; i++) {
 			if (i == delPos) shift = nC * nZ;
-			elements[i] = elements[i + shift];		
+			elements[i] = elements[i + shift];
 		}
 		dimension[4] = dimension[4] - 1;
 	}
+	
+	
 
 	public void addFrame(int n) {
 		if (n < 0 || n > getNFrames())
@@ -274,6 +313,16 @@ public class Virtual5DStack {
 		}
 		dimension[3] = dimension[3] - 1;
 	}
+	
+//	public void delSlice(int n, ImagePlus imp) {
+//		delSlice(n);
+//		ImageStack stack = imp.getImageStack();
+//		for (int i = getNFrames(); i > 0; i--) {
+//			for (int j = getNChannels(); j > 0; j--) {
+//				stack.deleteSlice(imp.getStackIndex(j, n, i));
+//			}
+//		}	
+//	}
 
 	public void addSlice(int n) {
 		int nC = getNChannels();

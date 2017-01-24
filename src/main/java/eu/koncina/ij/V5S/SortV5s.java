@@ -282,7 +282,7 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 				IJ.error("Could not reload V5s");
 			}
 			this.imp.show();
-			SaveDialog sd = new SaveDialog("Save V5S", "untitled", ".v5s");  
+			SaveDialog sd = new SaveDialog("Save V5S", v5s.getFolder(), v5s.getName(), ".v5s");
 			V5sWriter v5sw  = new V5sWriter();
 			try {
 				v5sw.writeXml(v5s, new File(sd.getDirectory(), sd.getFileName()));

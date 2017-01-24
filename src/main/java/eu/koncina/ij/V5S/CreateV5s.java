@@ -28,7 +28,7 @@ import ij.plugin.frame.PlugInFrame;
 public class CreateV5s extends PlugInFrame {
 
 	JPanel listPanel;
-	File folder;
+	File folder = null;
 	String byDim;
 
 	private static final long serialVersionUID = 1L;
@@ -160,11 +160,13 @@ public class CreateV5s extends PlugInFrame {
 //			IJ.error("Could not generate v5s file...");
 //		}
 		
+		v5s.setName(v5s.guessName());
 		return v5s;
 	}
 
 	class createListener implements ActionListener {
 		public void actionPerformed(ActionEvent e) {
+			CloseFrame();
 			Virtual5DStack v5s = createV5s();
 			if (v5s == null) return;
 			try {
@@ -172,7 +174,6 @@ public class CreateV5s extends PlugInFrame {
 			} catch (Exception e1) {
 				IJ.error("Could not generate Virtual 5D Stack");
 			}
-			CloseFrame();
 		}
 	}
 
@@ -206,6 +207,7 @@ public class CreateV5s extends PlugInFrame {
 
 			fc = new JFileChooser();
 			fc.setMultiSelectionEnabled(true);
+			fc.setCurrentDirectory(folder);
 			//Create the list and put it in a scroll pane.
 			list = new JList<String>(listModel);
 			list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
@@ -268,8 +270,8 @@ public class CreateV5s extends PlugInFrame {
 			public void actionPerformed(ActionEvent e) {
 
 				int index = list.getSelectedIndex();
+				fc.setCurrentDirectory(folder);
 				int returnVal = fc.showOpenDialog(CreateV5s.this);
-
 				if (returnVal == JFileChooser.APPROVE_OPTION) {
 					
 					setFolder(fc.getCurrentDirectory());

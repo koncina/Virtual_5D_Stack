@@ -50,8 +50,6 @@ public class V5sWriter {
 		Element frames = doc.createElement("frames");
 		frames.appendChild(doc.createTextNode(Integer.toString(v5s.getNFrames())));
 		info.appendChild(frames);
-		
-		IJ.log("" + v5s.getWidth() + " - " + v5s.getNFrames());
 
 		Element channels = doc.createElement("channels");
 		String[] cNames = v5s.getChannelNames();		
@@ -66,7 +64,6 @@ public class V5sWriter {
 			channel.appendChild(cName);
 			channels.appendChild(channel);
 		}
-		IJ.log("" + v5s.getWidth() + " - " + v5s.getNFrames());
 		info.appendChild(channels);
 		root.appendChild(info);
 		
