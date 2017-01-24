@@ -56,9 +56,7 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 		
 		montage = createMontage(imp, 0.5);
 		imp.hide();
-		montage.show();
-		
-		
+		montage.show();	
 
 		this.thumbOffsetX = (montage.getWidth() * 3) / (4 * gridX * 2);
 		this.thumbOffsetY = (montage.getHeight() * 3) / (4 * gridY * 2);
@@ -69,7 +67,6 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 	}
 
 	private ImagePlus createMontage(ImagePlus imp, double scale) {
-
 		int nZ = imp.getNSlices();
 		int nC = imp.getNChannels();
 		int nT = imp.getNFrames();
@@ -110,9 +107,9 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 			canvas.addMouseListener(this);
 			canvas.addMouseMotionListener(this);
 			ImagePlus.addImageListener(this);
-			int tool = Toolbar.getInstance().addTool("view V5s");
-			Toolbar.getInstance().setTool(tool);
-			tool = Toolbar.getInstance().addTool("Sort on montage");
+			//int tool = Toolbar.getInstance().addTool("view V5s");
+			//Toolbar.getInstance().setTool(tool);
+			int tool = Toolbar.getInstance().addTool("Sort on montage - P4f7a1a4f0L404aFa164Fa664Fab64");
 			Toolbar.getInstance().setTool(tool);
 			images.addElement(id);
 			images.addElement(idMontage);

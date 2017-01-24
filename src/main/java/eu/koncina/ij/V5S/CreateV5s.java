@@ -88,7 +88,6 @@ public class CreateV5s extends PlugInFrame {
 		return count;	
 	}
 
-
 	public Virtual5DStack createV5s() {
 		int width = 1;
 		int height = 1;
@@ -96,7 +95,7 @@ public class CreateV5s extends PlugInFrame {
 		int nT;
 		int nZ;
 		int nLists = listPanel.getComponentCount();
-		
+
 
 		if (byDim == "t") {
 			nT = nLists;
@@ -105,24 +104,9 @@ public class CreateV5s extends PlugInFrame {
 			nZ = nLists;
 			nT = getMaxListCount();
 		}
-		
+
 		if (nZ == 0 || nT == 0) return null;
-//		SaveDialog sd = new SaveDialog("Save V5S", "untitled", ".v5s");
-//		String path = sd.getDirectory();
-//		if (path == null)
-//			return; // Dialog was cancelled
-//		path = path.replace('\\', '/'); // MS Windows safe
-//		if (!path.endsWith("/"))
-//			path += "/";
-//		
-//		if (path == null)
-//			return;
-//		
-//		if (!folder.equals(new File(path))) {
-//			IJ.error("The v5s file should be located within the same folder");
-//			return;
-//		}
-		
+
 		for (int i = 0; i < nLists;  i++) {
 			String[] fl = getListContent(i);
 			for (String s : fl) {
@@ -137,9 +121,23 @@ public class CreateV5s extends PlugInFrame {
 		}
 
 		Virtual5DStack v5s = new Virtual5DStack(width, height, nC, nZ, nT);
+
+		GenericDialog gd = new GenericDialog("Channel names");
+
+		for (int i = 0; i < nC; i++) {
+			gd.addStringField("" + (i + 1), "Channel " + (i + 1));
+		}
+
+		gd.showDialog();
+		if (!gd.wasCanceled()) {
+			for (int i = 0; i < nC; i++) {
+				String cName = gd.getNextString();
+				if (!cName.isEmpty()) v5s.setChannelName(i, cName);
+			}
+		}
+
 		for (int i = 0; i < nLists;  i++) {
 			String[] fl = getListContent(i);
-
 			for (int j = 0;  j < fl.length; j++) {
 				File f = new File(folder, fl[j]);
 				for (int k = 0; k < nC; k++) {
@@ -151,15 +149,7 @@ public class CreateV5s extends PlugInFrame {
 				}		
 			}
 		}
-	
-//		v5s.setName(sd.getFileName().replace(".v5s", ""));
-//		V5sWriter v5sW  = new V5sWriter();
-//		try {
-//			v5sW.writeXml(v5s, new File(folder, sd.getFileName()));
-//		} catch (Exception e) {
-//			IJ.error("Could not generate v5s file...");
-//		}
-		
+
 		v5s.setName(v5s.guessName());
 		return v5s;
 	}
@@ -180,7 +170,7 @@ public class CreateV5s extends PlugInFrame {
 	public void CloseFrame(){
 		super.dispose();
 	}
-	
+
 	public void setFolder(File f) {
 		if (folder == null) folder = f;
 	}
@@ -273,7 +263,7 @@ public class CreateV5s extends PlugInFrame {
 				fc.setCurrentDirectory(folder);
 				int returnVal = fc.showOpenDialog(CreateV5s.this);
 				if (returnVal == JFileChooser.APPROVE_OPTION) {
-					
+
 					setFolder(fc.getCurrentDirectory());
 					for (File f : fc.getSelectedFiles()) {
 						if (!f.getParentFile().equals(folder) || f.getName().equals("") || alreadyInList(f.getName())) {

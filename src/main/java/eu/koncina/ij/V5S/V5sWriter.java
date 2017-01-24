@@ -3,8 +3,6 @@ package eu.koncina.ij.V5S;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-import ij.IJ;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
