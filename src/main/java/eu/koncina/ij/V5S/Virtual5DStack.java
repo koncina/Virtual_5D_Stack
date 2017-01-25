@@ -36,7 +36,9 @@ public class Virtual5DStack {
 
 	private String[] channelNames;
 	private String[] channelDescriptions;
-	private boolean[] channelStates;	
+	private boolean[] channelStates;
+	
+	public boolean changes = false;
 
 	public Virtual5DStack() {
 	}

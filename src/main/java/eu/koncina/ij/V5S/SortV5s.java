@@ -86,8 +86,11 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 		gridX = v5s.getNSlices();
 		gridY = v5s.getNFrames();
 		montage = createMontage(imp, 0.5);
+		boolean tmpChanges = v5s.changes;
+		v5s.changes = false; // To avoid to trigger the imageListener
 		imp.hide();
-		montage.show();	
+		v5s.changes = tmpChanges;
+		montage.show();
 		thumbOffsetX = (montage.getWidth() * 3) / (4 * gridX * 2);
 		thumbOffsetY = (montage.getHeight() * 3) / (4 * gridY * 2);
 		
@@ -228,8 +231,10 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 		int y = e.getY();
 		int[] gridTarget = getGridPosition(canvas.offScreenX(x), canvas.offScreenY(y));
 		if (gridStart[0] != gridTarget[0] && gridStart[1] == gridTarget[1]) {
+			v5s.changes = true;
 			swapCells(gridStart[0], gridTarget[0], gridStart[1]);
 		} else if (gridTarget[1] < 0 || gridTarget[1] > gridY) {
+			v5s.changes = true;
 			rmCells(gridStart[0]);
 		}
 	}
@@ -256,14 +261,12 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 	@Override
 	public void imageClosed(ImagePlus imp) {
 		if (imp.getID() == this.montage.getID()) {
-			//IJ.log("Montage closed");
 			try {
 				this.imp = v5s.load(); // Would be more efficient to move the slices in imp
 									   // instead of reloading from scratch...
 			} catch (Exception e) {
 				IJ.error("Could not reload V5s");
 			}
-			this.imp.show();
 			SaveDialog sd = new SaveDialog("Save V5S", v5s.getFolder().toString(), v5s.getName(), ".v5s");
 			V5sWriter v5sw  = new V5sWriter();
 			try {
@@ -271,8 +274,9 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 			} catch (Exception e) {
 				IJ.log("Did not save v5s file...");
 			}
+			ImagePlus.removeImageListener(this);
+			this.imp.show();
 		}
-		
 	}
 
 	@Override

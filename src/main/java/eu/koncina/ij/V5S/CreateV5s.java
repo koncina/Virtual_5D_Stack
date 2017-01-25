@@ -24,10 +24,13 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
 import ij.IJ;
+import ij.ImageListener;
+import ij.ImagePlus;
 import ij.gui.GenericDialog;
+import ij.io.SaveDialog;
 import ij.plugin.frame.PlugInFrame;
 
-public class CreateV5s extends PlugInFrame {
+public class CreateV5s extends PlugInFrame implements ImageListener {
 
 	JPanel listPanel;
 	File folder = null;
@@ -35,7 +38,8 @@ public class CreateV5s extends PlugInFrame {
 	JCheckBox flipHCb = new JCheckBox("Horizontal flip");
 	JCheckBox flipVCb = new JCheckBox("Vertical flip");
 	JCheckBox hashCb = new JCheckBox("Generate Sha1 checksum", true);
-
+	ImagePlus imp;
+	Virtual5DStack v5s;
 
 	private static final long serialVersionUID = 1L;
 
@@ -106,8 +110,6 @@ public class CreateV5s extends PlugInFrame {
 		int nZ;
 
 		int nLists = listPanel.getComponentCount();
-
-
 
 		if (byDim == "t") {
 			nT = nLists;
@@ -208,19 +210,28 @@ public class CreateV5s extends PlugInFrame {
 		}
 
 		v5s.setName(v5s.guessName());
+		v5s.changes = true;
 		return v5s;
+	}
+	
+	public void loadV5s() {
+		Virtual5DStack v5s = createV5s();
+		if (v5s == null) return;
+		try {
+			this.v5s = v5s;
+			imp = v5s.load();
+			imp.show();
+			ImagePlus.addImageListener(this);
+		} catch (Exception e1) {
+			IJ.error("Could not generate Virtual 5D Stack");
+		}
+		
 	}
 
 	class createListener implements ActionListener {
 		public void actionPerformed(ActionEvent e) {
 			CloseFrame();
-			Virtual5DStack v5s = createV5s();
-			if (v5s == null) return;
-			try {
-				v5s.load().show();
-			} catch (Exception e1) {
-				IJ.error("Could not generate Virtual 5D Stack");
-			}
+			loadV5s();
 		}
 	}
 
@@ -351,5 +362,28 @@ public class CreateV5s extends PlugInFrame {
 				}
 			}
 		}
+	}
+
+	@Override
+	public void imageClosed(ImagePlus imp) {
+		if (imp.getID() == this.imp.getID() && v5s.changes) {
+			ImagePlus.removeImageListener(this);
+			SaveDialog sd = new SaveDialog("Save V5S", v5s.getFolder().toString(), v5s.getName(), ".v5s");
+			V5sWriter v5sw  = new V5sWriter();
+			try {
+				v5sw.writeXml(v5s, new File(sd.getDirectory(), sd.getFileName()));
+			} catch (Exception e) {
+				IJ.log("Did not save v5s file...");
+			}
+		}
+		
+	}
+
+	@Override
+	public void imageOpened(ImagePlus arg0) {
+	}
+
+	@Override
+	public void imageUpdated(ImagePlus arg0) {
 	}
 }

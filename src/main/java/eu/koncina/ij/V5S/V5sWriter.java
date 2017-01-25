@@ -3,6 +3,8 @@ package eu.koncina.ij.V5S;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
+import ij.IJ;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -103,10 +105,12 @@ public class V5sWriter {
 		bpp.appendChild(doc.createTextNode(Integer.toString(v5s.getDepth())));
 		info.appendChild(bpp);
 		
-		Element path = doc.createElement("path");
-		path.appendChild(doc.createTextNode(relativize(xml, v5s.getFolder())));
-		info.appendChild(path);
-		
+		String relPath = relativize(xml, v5s.getFolder());
+		if (!relPath.isEmpty()) {
+			Element path = doc.createElement("path");
+			path.appendChild(doc.createTextNode(relPath));
+			info.appendChild(path);
+		}
 		
 		root.appendChild(info);
 		
@@ -163,7 +167,7 @@ public class V5sWriter {
 			// send DOM to file
 			tr.transform(new DOMSource(doc), 
 					new StreamResult(new FileOutputStream(xml.getAbsolutePath())));
-
+			v5s.changes = false;
 		} catch (TransformerException te) {
 			System.out.println(te.getMessage());
 		} catch (IOException ioe) {
