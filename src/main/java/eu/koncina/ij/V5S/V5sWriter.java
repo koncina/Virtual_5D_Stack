@@ -82,16 +82,19 @@ public class V5sWriter {
 		info.appendChild(frames);
 
 		Element channels = doc.createElement("channels");
-		String[] cNames = v5s.getChannelNames();		
+		String[] cNames = v5s.getChannelNames();
+		String[] cDescriptions = v5s.getChannelDescriptions();
 		for (int i = 0; i < cNames.length; i++) {
 			Element channel = doc.createElement("channel");
 			Element cId = doc.createElement("id");
 			cId.appendChild(doc.createTextNode(Integer.toString(i + 1)));
 			Element cName = doc.createElement("name");
 			cName.appendChild(doc.createTextNode(cNames[i]));
-
+			Element cDescription = doc.createElement("description");
+			cDescription.appendChild(doc.createTextNode(cDescriptions[i]));
 			channel.appendChild(cId);
 			channel.appendChild(cName);
+			channel.appendChild(cDescription);
 			channels.appendChild(channel);
 		}
 		info.appendChild(channels);

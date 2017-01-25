@@ -117,6 +117,7 @@ public class CreateV5s extends PlugInFrame {
 
 		int[] nC = new int[nT * nZ];
 		int nCMax = 0;
+		String[] cDescriptionList = null;
 		
 		if (nZ == 0 || nT == 0) return null;
 
@@ -126,13 +127,21 @@ public class CreateV5s extends PlugInFrame {
 				String s = fl[j];
 				File f = new File(folder, s);
 				int[] dim = Virtual5DStack.getDimension(f);
+				String[] cTmpDescription = Virtual5DStack.getChannelDescription(f);
 				if (dim[0] > width) width = dim[0];
 				if (dim[1] > height) height = dim[1];
 				nC[(i * getMaxListCount()) + j] = dim[2];
-				if (nCMax == 0) nCMax = dim[2];
+				if (nCMax == 0) {
+					nCMax = dim[2];
+					if (cTmpDescription != null && cTmpDescription.length == nCMax) cDescriptionList = cTmpDescription;
+					else cTmpDescription = new String[nCMax];
+				}
 				if (dim[2] != nCMax) {
 					IJ.log("Warning: The generator detected different number of channels... Please check output");
-					if (dim[2] > nCMax) nCMax = dim[2];
+					if (dim[2] > nCMax) {
+						nCMax = dim[2];
+						cDescriptionList = new String[nCMax];
+					}
 				}
 				if (dim[3] > 1 || dim[4] > 1) {
 					IJ.log("Warning: The generator detected multiple frames or slices in " + s);
@@ -144,16 +153,17 @@ public class CreateV5s extends PlugInFrame {
 		Virtual5DStack v5s = new Virtual5DStack(width, height, nCMax, nZ, nT);
 
 		GenericDialog gd = new GenericDialog("Channel names");
-
+		
 		for (int i = 0; i < nCMax; i++) {
-			gd.addStringField("" + (i + 1), "Channel " + (i + 1));
+			gd.addStringField("Name " + (i + 1), "Channel " + (i + 1), 15);
+			gd.addStringField("Description " + (i + 1), cDescriptionList[i], 15);
 		}
-
 		gd.showDialog();
 		if (!gd.wasCanceled()) {
 			for (int i = 0; i < nCMax; i++) {
 				String cName = gd.getNextString();
-				if (!cName.isEmpty()) v5s.setChannelName(i, cName);
+				String cDescription = gd.getNextString();
+				if (!cName.isEmpty()) v5s.setChannelName(i, cName, cDescription);
 			}
 		}
 
@@ -162,10 +172,22 @@ public class CreateV5s extends PlugInFrame {
 			for (int j = 0;  j < fl.length; j++) {
 				File f = new File(folder, fl[j]);
 				for (int k = 0; k < nC[(i * getMaxListCount()) + j]; k++) {
+					int channel = k + 1;
+					if (nC[(i * getMaxListCount()) + j] < nCMax) {
+						// Trying to detect the missing channel if possible based on the metadata
+						String[] cTmpDescription = Virtual5DStack.getChannelDescription(f);
+						for (int i2 = 0; i2 < cDescriptionList.length; i2++) {
+							if (!cTmpDescription[k].isEmpty() && cTmpDescription[k].equals(cDescriptionList[i2])) {
+								channel = i2 + 1;
+								IJ.log("Warning: Adjusting channel position for " + f.getName() + "from metadata (" + (k + 1) + " -> " + channel + ")");
+								break;
+							}
+						}
+					} 
 					if (byDim == "t") {
-						v5s.setElement(f, new int[]{k + 1, 1, 1}, new int[]{k + 1, j + 1, i + 1}, flipHCb.isSelected(), flipVCb.isSelected(), hashCb.isSelected());
+						v5s.setElement(f, new int[]{k + 1, 1, 1}, new int[]{channel, j + 1, i + 1}, flipHCb.isSelected(), flipVCb.isSelected(), hashCb.isSelected());
 					} else {
-						v5s.setElement(f, new int[]{k + 1, 1, 1}, new int[]{k + 1, i + 1, j + 1}, flipHCb.isSelected(), flipVCb.isSelected(), hashCb.isSelected());
+						v5s.setElement(f, new int[]{k + 1, 1, 1}, new int[]{channel, i + 1, j + 1}, flipHCb.isSelected(), flipVCb.isSelected(), hashCb.isSelected());
 					}
 				}		
 			}
@@ -174,8 +196,6 @@ public class CreateV5s extends PlugInFrame {
 		v5s.setName(v5s.guessName());
 		return v5s;
 	}
-	
-
 
 	class createListener implements ActionListener {
 		public void actionPerformed(ActionEvent e) {

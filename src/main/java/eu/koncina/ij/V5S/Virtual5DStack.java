@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.MessageDigest;
+import java.util.Hashtable;
 
 import ij.CompositeImage;
 import ij.IJ;
@@ -44,11 +45,12 @@ public class Virtual5DStack {
 		dimension = new int[] {width, height, nChannels, nSlices, nFrames};
 		nElements = nChannels * nSlices * nFrames;
 		elements = new V5sElement[nElements];
-		channelNames = channelDescriptions = new String[nChannels];
+		channelNames = new String[nChannels];
+		channelDescriptions = new String[nChannels];
 		channelStates = new boolean[nChannels];
 		this.name = name;
 		for (int c = 0; c < nChannels; c++) {
-			setChannelName(c, "channel " + (c + 1));
+			setChannelName(c, "channel " + (c + 1), "");
 			setChannelState(c, true);
 		}
 	}  
@@ -178,9 +180,39 @@ public class Virtual5DStack {
 		}
 		return dimension;
 	}
+	
+	public static String[] getChannelDescription(File f) {
+		if (f == null)
+			return null;
+		ImageReader reader = new ImageReader();
+		try {
+			hideMsg.start();
+			reader.setId(f.toString());
+			hideMsg.stop();
+			Hashtable<String, Object> meta = reader.getSeriesMetadata();
+			int nC = reader.getSizeC();
+			String[] description = new String[nC];
+			reader.close();
+			for (int i = 0; i < nC; i++) {
+				String m1 = (String) meta.get("ChannelName #" + (i + 1));
+				String m2 = (String) meta.get("IlluminationChannel Name #" + (i + 1));
+				if (!m1.isEmpty() && !m2.isEmpty()) description[i] = m1 + " - " + m2;
+				else description[i] = "";
+			}
+			return(description);
+		} catch (Exception e) {
+			IJ.log("Could not read the channel metadata of " + f.getName());
+		}
+		return null;
+	}
+	
 
 	public String[] getChannelNames() {
 		return channelNames;
+	}
+	
+	public String[] getChannelDescriptions() {
+		return channelDescriptions;
 	}
 
 	public V5sElement getElement(int n) {
@@ -424,7 +456,7 @@ public class Virtual5DStack {
 	public void setChannelName(int cIndex, String cName) {
 		channelNames[cIndex] = cName;
 	}
-
+	
 	public void setChannelNames(String[] cNames) {
 		if (cNames.length != dimension[2]) throw new IllegalArgumentException("Invalid number of channels");
 		channelNames = cNames;
