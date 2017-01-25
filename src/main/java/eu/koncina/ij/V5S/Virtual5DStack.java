@@ -41,8 +41,8 @@ public class Virtual5DStack {
 	public Virtual5DStack() {
 	}
 
-	public Virtual5DStack(int width, int height, int nChannels, int nSlices, int nFrames, String name) {
-		dimension = new int[] {width, height, nChannels, nSlices, nFrames};
+	public Virtual5DStack(int width, int height, int nChannels, int nSlices, int nFrames, int bpp, String name) {
+		dimension = new int[] {width, height, nChannels, nSlices, nFrames, bpp};
 		nElements = nChannels * nSlices * nFrames;
 		elements = new V5sElement[nElements];
 		channelNames = new String[nChannels];
@@ -53,10 +53,18 @@ public class Virtual5DStack {
 			setChannelName(c, "channel " + (c + 1), "");
 			setChannelState(c, true);
 		}
-	}  
+	}
+	
+	public Virtual5DStack(int width, int height, int nChannels, int nSlices, int nFrames, String name) {
+		this(width, height, nChannels, nSlices, nFrames, 16, name);
+	}
 
 	public Virtual5DStack(int width, int height, int nChannels, int nSlices, int nFrames) {
-		this(width, height, nChannels, nSlices, nFrames, "New");
+		this(width, height, nChannels, nSlices, nFrames, 16, "New");
+	}
+	
+	public Virtual5DStack(int width, int height, int nChannels, int nSlices, int nFrames, int bpp) {
+		this(width, height, nChannels, nSlices, nFrames, bpp, "New");
 	}
 
 	/** Returns that stack index (one-based) corresponding to the specified position.
@@ -133,7 +141,7 @@ public class Virtual5DStack {
 	public int getHeight() {
 		return dimension[1];
 	}
-
+	
 	public int getNChannels() {
 		return dimension[2];
 	}
@@ -144,6 +152,10 @@ public class Virtual5DStack {
 
 	public int getNFrames() {
 		return dimension[4];
+	}
+	
+	public int getDepth() {
+		return dimension[5];
 	}
 
 	public int getStackSize() {
@@ -171,7 +183,7 @@ public class Virtual5DStack {
 			hideMsg.start();
 			reader.setId(f.toString());
 			hideMsg.stop();
-			dimension = new int[]{reader.getSizeX(), reader.getSizeY(), reader.getSizeC(), reader.getSizeZ(), reader.getSizeT()};
+			dimension = new int[]{reader.getSizeX(), reader.getSizeY(), reader.getSizeC(), reader.getSizeZ(), reader.getSizeT(), reader.getBitsPerPixel()};
 			reader.close();
 		} catch (FormatException exc) {
 			IJ.error(exc.getMessage());
@@ -185,12 +197,13 @@ public class Virtual5DStack {
 		if (f == null)
 			return null;
 		ImageReader reader = new ImageReader();
+		int nC = 0;
 		try {
 			hideMsg.start();
 			reader.setId(f.toString());
 			hideMsg.stop();
 			Hashtable<String, Object> meta = reader.getSeriesMetadata();
-			int nC = reader.getSizeC();
+			nC = reader.getSizeC();
 			String[] description = new String[nC];
 			reader.close();
 			for (int i = 0; i < nC; i++) {
@@ -203,7 +216,7 @@ public class Virtual5DStack {
 		} catch (Exception e) {
 			IJ.log("Could not read the channel metadata of " + f.getName());
 		}
-		return null;
+		return new String[nC];
 	}
 	
 
@@ -306,7 +319,6 @@ public class Virtual5DStack {
 	    }
 	}
 	
-
 	public void setName(String name) {
 		this.name = name;
 	}
@@ -474,14 +486,19 @@ public class Virtual5DStack {
 		ImageStack stack = new ImageStack(dimension[0], dimension[1], nElements);
 		short[] pixels = new short[dimension[0] * dimension[1]];
 		for (int i = 0; i < nElements; i++) {
-			IJ.showProgress(i / nElements);
+			IJ.showProgress(i, nElements);
 			if (elements[i] != null) {
 				if (r.getCurrentFile() == null || !r.getCurrentFile().equals(elements[i].getFile().getPath())) {
 					hideMsg.start();
-					r.setId(elements[i].getFile().getPath());					
+					r.setId(elements[i].getFile().getPath());
 					hideMsg.stop();
 				}
 				ImageProcessor ip = r.openProcessors(elements[i].getSourcePos()[0] - 1)[0];
+				if (ip.getBitDepth() != dimension[5]) {
+					IJ.error("Unexpected image depth: " + ip.getBitDepth() + " instead of " + dimension[5]);
+					r.close();
+					return null;
+				}
 				ip = cr.expandImage(ip, dimension[0], dimension[1], (dimension[0] - r.getSizeX()) / 2, (dimension[1] - r.getSizeY()) / 2);
 				if (elements[i].getFlipHorizontal()) ip.flipHorizontal();
 				if (elements[i].getFlipVertical()) ip.flipVertical();
@@ -490,18 +507,21 @@ public class Virtual5DStack {
 				stack.setSliceLabel(elements[i].getFile().getName(), i + 1);
 			} else {
 				// Replacing empty slices with black images
-				stack.setProcessor(new ShortProcessor(dimension[0], dimension[1], pixels, null), i + 1);
+				ImageProcessor emptyProcessor = new ShortProcessor(dimension[0], dimension[1], pixels, null);
+				if (dimension[5] == 8) {
+					emptyProcessor = emptyProcessor.convertToByteProcessor();
+				}
+				stack.setProcessor(emptyProcessor, i + 1);
 				stack.setSliceLabel("missing", i + 1);
 			}
 		}
 		r.close();
 		ImagePlus imp = new ImagePlus("", stack);
 		imp.setDimensions(dimension[2], dimension[3], dimension[4]);
-		imp = new CompositeImage(imp, 1);
+		imp = new CompositeImage(imp, IJ.COMPOSITE);
 		imp.setOpenAsHyperStack(true);
 		imp.setTitle(name);
 		imp.setProperty("v5s", this);
-		ImagePlus.setDefault16bitRange(16);
 		IJ.showStatus("");
 		IJ.showProgress(2);
 

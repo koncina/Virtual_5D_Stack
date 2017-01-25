@@ -22,7 +22,7 @@ import ij.IJ;
 
 public class V5sReader {
 	public Virtual5DStack loadFromXml(File f) {
-		int width, height, channels, slices, frames;
+		int width, height, channels, slices, frames, bpp;
 		String[] channelNames;
 		
 		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
@@ -47,6 +47,7 @@ public class V5sReader {
 			if (version > 1) IJ.error("The v5s file cannot be handled by this version of the plugin");
 			width = Integer.parseInt(infoElement.getElementsByTagName("width").item(0).getTextContent());
 			height = Integer.parseInt(infoElement.getElementsByTagName("height").item(0).getTextContent());
+			bpp = Integer.parseInt(infoElement.getElementsByTagName("bpp").item(0).getTextContent());
 
 			Element tElement = (Element) infoElement.getElementsByTagName("frames").item(0);
 			frames = tElement.getElementsByTagName("frame").getLength();
@@ -77,7 +78,7 @@ public class V5sReader {
 		}
 
 
-		Virtual5DStack v5s = new Virtual5DStack(width, height, channels, slices, frames);
+		Virtual5DStack v5s = new Virtual5DStack(width, height, channels, slices, frames, bpp);
 		v5s.setChannelNames(channelNames);
 
 		NodeList imageList = doc.getElementsByTagName("image");
@@ -129,7 +130,6 @@ public class V5sReader {
 		int n = 0;
 		int nFrames;
 		int nSlices = 0;
-		
 		// This will reference one line at a time
 		String line = null;
 		List<File> fileList = new ArrayList<File>();
@@ -176,7 +176,7 @@ public class V5sReader {
 				fileList.set(i, null);
 				continue;
 			}
-
+			if (!fileList.get(i).exists()) return null;
 			dim = Virtual5DStack.getDimension(fileList.get(i));
 			if (dim[0] > dimMax[0])
 				dimMax[0] = dim[0];

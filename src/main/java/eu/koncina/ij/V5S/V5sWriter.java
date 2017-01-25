@@ -98,6 +98,11 @@ public class V5sWriter {
 			channels.appendChild(channel);
 		}
 		info.appendChild(channels);
+		
+		Element bpp = doc.createElement("bpp");
+		bpp.appendChild(doc.createTextNode(Integer.toString(v5s.getDepth())));
+		info.appendChild(bpp);
+		
 		root.appendChild(info);
 		
 		// Add images

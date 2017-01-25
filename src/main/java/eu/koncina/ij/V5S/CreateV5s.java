@@ -6,6 +6,7 @@ import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.util.Arrays;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -100,9 +101,10 @@ public class CreateV5s extends PlugInFrame {
 	public Virtual5DStack createV5s() {
 		int width = 1;
 		int height = 1;
-		
+		int bpp = 0;
 		int nT;
 		int nZ;
+		
 		int nLists = listPanel.getComponentCount();
 		
 		
@@ -134,18 +136,27 @@ public class CreateV5s extends PlugInFrame {
 				if (nCMax == 0) {
 					nCMax = dim[2];
 					if (cTmpDescription != null && cTmpDescription.length == nCMax) cDescriptionList = cTmpDescription;
-					else cTmpDescription = new String[nCMax];
+					else {
+						cDescriptionList = new String[nCMax];
+						Arrays.fill(cDescriptionList, "");
+					}
 				}
 				if (dim[2] != nCMax) {
 					IJ.log("Warning: The generator detected different number of channels... Please check output");
 					if (dim[2] > nCMax) {
 						nCMax = dim[2];
 						cDescriptionList = new String[nCMax];
+						Arrays.fill(cDescriptionList, "");
 					}
 				}
 				if (dim[3] > 1 || dim[4] > 1) {
 					IJ.log("Warning: The generator detected multiple frames or slices in " + s);
 					IJ.log("Warning: Using the first slice and frame");
+				}
+				if (bpp == 0) bpp = dim[5];
+				if (bpp != dim[5]) {
+					IJ.error("Creating a v5s with different image depths is not allowed");
+					return null;
 				}
 			}
 		}
@@ -156,7 +167,9 @@ public class CreateV5s extends PlugInFrame {
 		
 		for (int i = 0; i < nCMax; i++) {
 			gd.addStringField("Name " + (i + 1), "Channel " + (i + 1), 15);
-			gd.addStringField("Description " + (i + 1), cDescriptionList[i], 15);
+			String cDescription;
+			if ((cDescription = cDescriptionList[i]) == null) cDescription = "";
+			gd.addStringField("Description " + (i + 1), cDescription, 15);
 		}
 		gd.showDialog();
 		if (!gd.wasCanceled()) {
@@ -177,7 +190,8 @@ public class CreateV5s extends PlugInFrame {
 						// Trying to detect the missing channel if possible based on the metadata
 						String[] cTmpDescription = Virtual5DStack.getChannelDescription(f);
 						for (int i2 = 0; i2 < cDescriptionList.length; i2++) {
-							if (!cTmpDescription[k].isEmpty() && cTmpDescription[k].equals(cDescriptionList[i2])) {
+							IJ.log("" + cTmpDescription.length);
+							if (cTmpDescription[k] != null && cTmpDescription[k].equals(cDescriptionList[i2])) {
 								channel = i2 + 1;
 								IJ.log("Warning: Adjusting channel position for " + f.getName() + "from metadata (" + (k + 1) + " -> " + channel + ")");
 								break;

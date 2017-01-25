@@ -38,6 +38,11 @@ public class OpenV5s extends ImagePlus  implements PlugIn {
 		// Trying to load from the old text format
 		if (v5s == null) v5s = v5sr.loadFromTxt(f);
 		
+		if (v5s == null) {
+			IJ.error("Could not load V5S");
+			return;
+		}
+		
 		String[] channelNames = v5s.getChannelNames();
 		
 		for (int i = 0; i < channelNames.length; i ++) {
