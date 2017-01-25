@@ -255,7 +255,7 @@ public class Virtual5DStack {
 	}
 	
 	// From http://stackoverflow.com/a/6293816
-	public String createSha1(File file) {
+	public static String createSha1(File file) {
 	    try {
 	    	MessageDigest digest = MessageDigest.getInstance("SHA-1");
 	    	InputStream fis = new FileInputStream(file);

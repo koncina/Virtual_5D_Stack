@@ -6,6 +6,7 @@ import org.w3c.dom.Element;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -20,6 +21,37 @@ import javax.xml.transform.stream.StreamResult;
 public class V5sWriter {
 
 	private static final String PLUGIN_VERSION = "0.2";
+	
+	 // Adapted from http://stackoverflow.com/a/10802188
+	 private static String relativize(File v5sFile, File imgFile) {
+		  // Split paths into segments
+		  String[] bParts = v5sFile.getPath().split("\\/");
+		  String[] cParts = imgFile.getPath().split("\\/");
+
+		  // Discard trailing segment of base path
+		  if (bParts.length > 0 && !v5sFile.getPath().endsWith("/")) {
+		    bParts = Arrays.copyOf(bParts, bParts.length - 1);
+		  }
+
+		  // Remove common prefix segments
+		  int i = 0;
+		  while (i < bParts.length && i < cParts.length && bParts[i].equals(cParts[i])) {
+		    i++;
+		  }
+
+		  // Construct the relative path
+		  StringBuilder sb = new StringBuilder();
+		  for (int j = 0; j < (bParts.length - i); j++) {
+		    sb.append("../");
+		  }
+		  for (int j = i; j < cParts.length; j++) {
+		    if (j != i) {
+		      sb.append("/");
+		    }
+		    sb.append(cParts[j]);
+		  }
+		  return sb.toString();
+		}
 
 	public void writeXml(Virtual5DStack v5s, File xml) throws ParserConfigurationException {
 		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
@@ -84,7 +116,8 @@ public class V5sWriter {
 				Element imgZ = doc.createElement("z");
 				Element imgT = doc.createElement("t");
 				Element imgC = doc.createElement("c");
-				imgFilename.appendChild(doc.createTextNode(v5s.getElementFile(i).getName()));
+				//imgFilename.appendChild(doc.createTextNode(v5s.getElementFile(i).getName()));
+				imgFilename.appendChild(doc.createTextNode(relativize(xml, v5s.getElementFile(i))));
 				String sha1 = v5s.getElement(i).getSha1();
 				if (sha1 != null) imgFilename.setAttribute("sha1", sha1);
 				imgZ.appendChild(doc.createTextNode(Integer.toString(targetPosition[1])));

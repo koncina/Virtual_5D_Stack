@@ -42,33 +42,33 @@ public class V5sReader {
 
 		// reading the info node
 		try {
-			Element info_element = (Element) doc.getElementsByTagName("info").item(0);
-			int version = Integer.parseInt(info_element.getElementsByTagName("version").item(0).getTextContent());
+			Element infoElement = (Element) doc.getElementsByTagName("info").item(0);
+			int version = Integer.parseInt(infoElement.getElementsByTagName("version").item(0).getTextContent());
 			if (version > 1) IJ.error("The v5s file cannot be handled by this version of the plugin");
-			width = Integer.parseInt(info_element.getElementsByTagName("width").item(0).getTextContent());
-			height = Integer.parseInt(info_element.getElementsByTagName("height").item(0).getTextContent());
+			width = Integer.parseInt(infoElement.getElementsByTagName("width").item(0).getTextContent());
+			height = Integer.parseInt(infoElement.getElementsByTagName("height").item(0).getTextContent());
 
-			Element t_element = (Element) info_element.getElementsByTagName("frames").item(0);
-			frames = t_element.getElementsByTagName("frame").getLength();
-			if (frames == 0) frames = Integer.parseInt(t_element.getTextContent());
+			Element tElement = (Element) infoElement.getElementsByTagName("frames").item(0);
+			frames = tElement.getElementsByTagName("frame").getLength();
+			if (frames == 0) frames = Integer.parseInt(tElement.getTextContent());
 
-			Element z_element = (Element) info_element.getElementsByTagName("slices").item(0);
-			slices = z_element.getElementsByTagName("slice").getLength();
-			if (slices == 0) slices = Integer.parseInt(z_element.getTextContent());
+			Element zElement = (Element) infoElement.getElementsByTagName("slices").item(0);
+			slices = zElement.getElementsByTagName("slice").getLength();
+			if (slices == 0) slices = Integer.parseInt(zElement.getTextContent());
 
-			Element channels_element = (Element) info_element.getElementsByTagName("channels").item(0);
-			NodeList c_list = channels_element.getElementsByTagName("channel");
+			Element channelsElement = (Element) infoElement.getElementsByTagName("channels").item(0);
+			NodeList cList = channelsElement.getElementsByTagName("channel");
 
-			channels = c_list.getLength();
+			channels = cList.getLength();
 
 			channelNames = new String[channels];
 
 			for (int i = 0; i < channels; i++) {
-				Element c_element = (Element) c_list.item(i);
-				int c_index = Integer.parseInt(c_element.getElementsByTagName("id").item(0).getTextContent());
-				if (c_index < 1 || c_index - 1 > channels) IJ.error("channel index is out of range");
-				String c_name = c_element.getElementsByTagName("name").item(0).getTextContent();
-				channelNames[c_index - 1] = c_name;
+				Element cElement = (Element) cList.item(i);
+				int cIndex = Integer.parseInt(cElement.getElementsByTagName("id").item(0).getTextContent());
+				if (cIndex < 1 || cIndex - 1 > channels) IJ.error("channel index is out of range");
+				String cName = cElement.getElementsByTagName("name").item(0).getTextContent();
+				channelNames[cIndex - 1] = cName;
 			}
 
 		} catch (Exception e) {
@@ -80,26 +80,43 @@ public class V5sReader {
 		Virtual5DStack v5s = new Virtual5DStack(width, height, channels, slices, frames);
 		v5s.setChannelNames(channelNames);
 
-		NodeList image_list = doc.getElementsByTagName("image");
-		for (int i = 0; i < image_list.getLength(); i++) {
-			Node image_node = image_list.item(i);
-			if (image_node.getNodeType() == Node.ELEMENT_NODE) {
-				Element image_element = (Element) image_node;
-				int t_pos = Integer.parseInt(image_element.getElementsByTagName("t").item(0).getTextContent());
-				int z_pos = Integer.parseInt(image_element.getElementsByTagName("z").item(0).getTextContent());
-				String filename = image_element.getElementsByTagName("filename").item(0).getTextContent();
+		NodeList imageList = doc.getElementsByTagName("image");
+		for (int i = 0; i < imageList.getLength(); i++) {
+			Node imageNode = imageList.item(i);
+			if (imageNode.getNodeType() == Node.ELEMENT_NODE) {
+				Element imageElement = (Element) imageNode;
+				int tPos = Integer.parseInt(imageElement.getElementsByTagName("t").item(0).getTextContent());
+				int zPos = Integer.parseInt(imageElement.getElementsByTagName("z").item(0).getTextContent());
+				Node fileNode =  imageElement.getElementsByTagName("filename").item(0);
+				Element fileElement = (Element) fileNode;
+				String filename = fileNode.getTextContent();
+				File imgFile = new File(f.getParent(), filename);
+				String sha1 = fileElement.getAttribute("sha1");
+				if (!imgFile.exists() && (imgFile = new File(f.getParent(), new File(filename).getName())).exists()) {
+					IJ.log("warning: " + new File(filename).getName() + " was found in the local path but not in the saved relative path");
+				} else if (!imgFile.exists()) {
+					IJ.error("Could not find " + imgFile.getName());
+					return null;
+				}
+				
+				if (sha1 != null) {
+					if (!Virtual5DStack.createSha1(imgFile).equals(sha1)) IJ.log("warning: sha1 checksum changed for " + imgFile.getName());
+				} else {
+					IJ.log("Warning: no sha1 checksum is stored in the v5s");
+				}
+				
 				// Mapping channels
-				NodeList c_list = image_element.getElementsByTagName("c");
+				NodeList c_list = imageElement.getElementsByTagName("c");
 				for (int c = 0; c < c_list.getLength(); c++) {
-					Node c_node = c_list.item(c);
-					if (c_node.getNodeType() == Node.ELEMENT_NODE) {
-						Element c_element = (Element) c_node;
-						int c_pos = Integer.parseInt(c_element.getAttribute("id"));
+					Node cNode = c_list.item(c);
+					if (cNode.getNodeType() == Node.ELEMENT_NODE) {
+						Element c_element = (Element) cNode;
+						int cPos = Integer.parseInt(c_element.getAttribute("id"));
 						int[] srcPos = new int[]{Integer.parseInt(c_element.getTextContent()), 1, 1};
-						int[] stackPos = new int[]{c_pos, z_pos, t_pos};
-						v5s.setElement(new File(f.getParent(), filename), srcPos, stackPos,
-								Boolean.parseBoolean(image_element.getAttribute("flipHorizontal")),
-								Boolean.parseBoolean(image_element.getAttribute("flipVertical")));
+						int[] stackPos = new int[]{cPos, zPos, tPos};
+						v5s.setElement(imgFile, srcPos, stackPos,
+								Boolean.parseBoolean(imageElement.getAttribute("flipHorizontal")),
+								Boolean.parseBoolean(imageElement.getAttribute("flipVertical")));
 					}
 				}
 			}
