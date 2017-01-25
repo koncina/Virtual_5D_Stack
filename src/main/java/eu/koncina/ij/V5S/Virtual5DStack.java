@@ -1,7 +1,10 @@
 package eu.koncina.ij.V5S;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.security.MessageDigest;
 
 import ij.CompositeImage;
 import ij.IJ;
@@ -237,7 +240,40 @@ public class Virtual5DStack {
 			}
 		}
 		return true;
-	}	
+	}
+	
+	// From http://stackoverflow.com/a/9855338
+	final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
+	public static String bytesToHex(byte[] bytes) {
+	    char[] hexChars = new char[bytes.length * 2];
+	    for ( int j = 0; j < bytes.length; j++ ) {
+	        int v = bytes[j] & 0xFF;
+	        hexChars[j * 2] = hexArray[v >>> 4];
+	        hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+	    }
+	    return new String(hexChars);
+	}
+	
+	// From http://stackoverflow.com/a/6293816
+	public String createSha1(File file) {
+	    try {
+	    	MessageDigest digest = MessageDigest.getInstance("SHA-1");
+	    	InputStream fis = new FileInputStream(file);
+		    int n = 0;
+		    byte[] buffer = new byte[8192];
+		    while (n != -1) {
+		        n = fis.read(buffer);
+		        if (n > 0) {
+		            digest.update(buffer, 0, n);
+		        }
+		    }
+		    fis.close();
+		    return bytesToHex(digest.digest());
+	    } catch (Exception e) {
+	    	return "Could no generate Sha1 checksum";
+	    }
+	}
+	
 
 	public void setName(String name) {
 		this.name = name;
@@ -271,8 +307,6 @@ public class Virtual5DStack {
 		dimension[4] = dimension[4] - 1;
 	}
 	
-	
-
 	public void addFrame(int n) {
 		if (n < 0 || n > getNFrames())
 			throw new IllegalArgumentException("n out of range: " + n);
@@ -292,7 +326,6 @@ public class Virtual5DStack {
 			elements[i] = null;
 		}
 		dimension[4] = dimension[4] + 1;
-
 	}
 
 	public void delSlice(int n) {
@@ -371,6 +404,11 @@ public class Virtual5DStack {
 		int n = getStackIndex(stackPos[0], stackPos[1], stackPos[2]);
 		setElement(new V5sElement(fileName, srcPos, flipHorizontal, flipVertical), n);
 	}
+	
+	public void setElement(File fileName, int[] srcPos, int[] stackPos, boolean flipHorizontal, boolean flipVertical, boolean doHash) {
+		int n = getStackIndex(stackPos[0], stackPos[1], stackPos[2]);
+		setElement(new V5sElement(fileName, srcPos, flipHorizontal, flipVertical, doHash), n);
+	}
 
 	public void setElement(V5sElement slice, int n) {
 		if (n < 1 || n > nElements)
@@ -440,6 +478,7 @@ public class Virtual5DStack {
 
 	public class V5sElement {
 		private File file = null;
+		private String sha1 = null;
 		private int[] srcPos = new int[3];
 		private boolean flipHorizontal = false;
 		private boolean flipVertical = false;
@@ -449,6 +488,15 @@ public class Virtual5DStack {
 			this.srcPos = srcPos;
 			this.flipHorizontal = flipHorizontal;
 			this.flipVertical = flipVertical;
+		}
+		
+		V5sElement(File file, int[] srcPos, boolean flipHorizontal, boolean flipVertical, boolean doSha1) {
+			this.file = file;
+			this.srcPos = srcPos;
+			this.flipHorizontal = flipHorizontal;
+			this.flipVertical = flipVertical;
+			if (doSha1 == true) this.sha1 = createSha1(file);
+			
 		}
 
 		public V5sElement() {
@@ -461,6 +509,10 @@ public class Virtual5DStack {
 		public String getName() {
 			if (file == null) return "empty";
 			return file.getName();
+		}
+		
+		public String getSha1() {
+			return sha1;
 		}
 
 		public int[] getSourcePos() {
@@ -490,6 +542,10 @@ public class Virtual5DStack {
 
 		public void setFlipVertical(boolean flipVertical) {
 			this.flipVertical = flipVertical;
+		}
+		
+		public void doSha1() {
+			sha1 = createSha1(file);
 		}
 	}  
 }

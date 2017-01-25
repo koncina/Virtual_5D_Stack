@@ -49,21 +49,8 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 
 	public int setup(String arg, ImagePlus imp) {
 		this.imp = imp;
-		v5s = (Virtual5DStack) imp.getProperty("v5s");
-		
-		gridX = v5s.getNSlices();
-		gridY = v5s.getNFrames();
-		
-		montage = createMontage(imp, 0.5);
-		imp.hide();
-		montage.show();	
-
-		this.thumbOffsetX = (montage.getWidth() * 3) / (4 * gridX * 2);
-		this.thumbOffsetY = (montage.getHeight() * 3) / (4 * gridY * 2);
-
 		IJ.register(SortV5s.class);
-
-		return DOES_ALL + NO_CHANGES;
+		return DOES_ALL + NO_CHANGES + STACK_REQUIRED;
 	}
 
 	private ImagePlus createMontage(ImagePlus imp, double scale) {
@@ -75,7 +62,6 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 
 		ImageStack newStack = new ImageStack(width * nZ, height * nT);
 		ImageStack stack = imp.getStack();
-
 		for (int c = 0; c < nC; c++) {
 			ImageProcessor ip = new ByteProcessor(width * nZ, height * nT);
 			for (int z = 0; z < nZ; z++) {
@@ -85,14 +71,26 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 			}
 			newStack.addSlice(ip);
 		}
-
-		ImagePlus i = new ImagePlus("the stack", newStack);
+		ImagePlus i = new ImagePlus(v5s.getName() + " - montage", newStack);
 		i.setDimensions(nC, 1, 1);
 		i = new CompositeImage(i, 1);
 		return(i);
 	}
 
 	public void run(ImageProcessor ip) {
+		v5s = (Virtual5DStack) imp.getProperty("v5s");
+		if (v5s == null) {
+			IJ.error("A virtual 5D stack image is required");
+			return;
+		}
+		gridX = v5s.getNSlices();
+		gridY = v5s.getNFrames();
+		montage = createMontage(imp, 0.5);
+		imp.hide();
+		montage.show();	
+		thumbOffsetX = (montage.getWidth() * 3) / (4 * gridX * 2);
+		thumbOffsetY = (montage.getHeight() * 3) / (4 * gridY * 2);
+		
 		Integer id = new Integer(imp.getID());
 		Integer idMontage = new Integer(montage.getID());
 		if (images.contains(id)) {
@@ -107,8 +105,6 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 			canvas.addMouseListener(this);
 			canvas.addMouseMotionListener(this);
 			ImagePlus.addImageListener(this);
-			//int tool = Toolbar.getInstance().addTool("view V5s");
-			//Toolbar.getInstance().setTool(tool);
 			int tool = Toolbar.getInstance().addTool("Sort on montage - P4f7a1a4f0L404aFa164Fa664Fab64");
 			Toolbar.getInstance().setTool(tool);
 			images.addElement(id);
@@ -133,6 +129,7 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 	}
 
 	public void swapCells(int p1, int p2, int frame) {
+		//double mag = montage.getWindow().getCanvas().getMagnification();
 		int cellWidth = montage.getWidth() / gridX;
 		int nC = montage.getNChannels();
 		
@@ -160,11 +157,12 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 		V5sElement[] tempElements = v5s.getElementsC(p1, frame);
 		v5s.setElementsC(v5s.getElementsC(p2, frame) , p1, frame);
 		v5s.setElementsC(tempElements , p2, frame);
-
-		montage.updateAndRepaintWindow();
+		//montage.getWindow().getCanvas().setMagnification(mag);
+		montage.updateAndDraw();
 	}
 	
 	public void rmCells(int p) {
+		if (gridX == 1) return;
 		if (!v5s.isSliceEmpty(p)) {
 			int dialogButton = JOptionPane.YES_NO_OPTION;
 			int dialogResult = JOptionPane.showConfirmDialog (null, "Slice is not empty. Would you really like to remove the slice?", "Warning", dialogButton);
@@ -182,7 +180,7 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 		this.montage.setStack(null, cr.expandStack(montage.getStack(), montage.getWidth() - cellWidth, montage.getHeight(), 0, 0));
 		v5s.delSlice(p);
 		gridX--;
-		montage.updateAndRepaintWindow();
+		montage.updateAndDraw();
 	}
 	
 	public int[] getGridPosition(int mouseX, int mouseY) {
@@ -242,20 +240,7 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 		int y = e.getY();
 		int offscreenX = canvas.offScreenX(x);
 		int offscreenY = canvas.offScreenY(y);
-		montage.setRoi(new ImageRoi(offscreenX - this.thumbOffsetX, offscreenY - this.thumbOffsetY, this.sourceCellThumb));
-	}
-
-	public static String modifiers(int flags) {
-		String s = " [ ";
-		if (flags == 0) return "";
-		if ((flags & Event.SHIFT_MASK) != 0) s += "Shift ";
-		if ((flags & Event.CTRL_MASK) != 0) s += "Control ";
-		if ((flags & Event.META_MASK) != 0) s += "Meta (right button) ";
-		if ((flags & Event.ALT_MASK) != 0) s += "Alt ";
-		s += "]";
-		if (s.equals(" [ ]"))
-			s = " [no modifiers]";
-		return s;
+		montage.setRoi(new ImageRoi(offscreenX - thumbOffsetX, offscreenY - thumbOffsetY, sourceCellThumb));
 	}
 
 	public void mouseExited(MouseEvent e) {}
@@ -292,6 +277,10 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 
 	@Override
 	public void imageUpdated(ImagePlus imp) {
+		if (imp.getID() == this.montage.getID()) {
+			// We do not want to save the montage itself
+			montage.changes = false;
+		}
 		return;
 	}
 }

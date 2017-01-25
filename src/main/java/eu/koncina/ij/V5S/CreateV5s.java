@@ -12,6 +12,7 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JList;
@@ -30,6 +31,10 @@ public class CreateV5s extends PlugInFrame {
 	JPanel listPanel;
 	File folder = null;
 	String byDim;
+	JCheckBox flipHCb = new JCheckBox("Horizontal flip");
+	JCheckBox flipVCb = new JCheckBox("Vertical flip");
+	JCheckBox hashCb = new JCheckBox("Generate Sha1 checksum", true);
+	
 
 	private static final long serialVersionUID = 1L;
 
@@ -49,7 +54,7 @@ public class CreateV5s extends PlugInFrame {
 		byDim = gd.getNextChoice();
 		int size = (int) gd.getNextNumber();
 
-		this.setSize(500, 300);
+		this.setSize(700, 400);
 
 		listPanel = new JPanel();
 		listPanel.setLayout(new GridLayout(0, size));
@@ -60,12 +65,16 @@ public class CreateV5s extends PlugInFrame {
 			listPanel.add(pane);
 		}
 		JButton createBtn = new JButton("Create");
+		
 		createListener createListener = new createListener();
 		createBtn.addActionListener(createListener);
 		JPanel buttonPane = new JPanel();
 		buttonPane.setLayout(new BoxLayout(buttonPane,
 				BoxLayout.LINE_AXIS));
 		buttonPane.add(createBtn);
+		buttonPane.add(flipHCb);
+		buttonPane.add(flipVCb);
+		buttonPane.add(hashCb);
 		buttonPane.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 		this.add(listPanel, BorderLayout.CENTER);
 		this.add(buttonPane, BorderLayout.PAGE_END);
@@ -91,12 +100,13 @@ public class CreateV5s extends PlugInFrame {
 	public Virtual5DStack createV5s() {
 		int width = 1;
 		int height = 1;
-		int nC = 0;
+		
 		int nT;
 		int nZ;
 		int nLists = listPanel.getComponentCount();
-
-
+		
+		
+		
 		if (byDim == "t") {
 			nT = nLists;
 			nZ = getMaxListCount();
@@ -105,32 +115,43 @@ public class CreateV5s extends PlugInFrame {
 			nT = getMaxListCount();
 		}
 
+		int[] nC = new int[nT * nZ];
+		int nCMax = 0;
+		
 		if (nZ == 0 || nT == 0) return null;
 
 		for (int i = 0; i < nLists;  i++) {
 			String[] fl = getListContent(i);
-			for (String s : fl) {
+			for (int j = 0; j < fl.length; j++) {
+				String s = fl[j];
 				File f = new File(folder, s);
 				int[] dim = Virtual5DStack.getDimension(f);
 				if (dim[0] > width) width = dim[0];
 				if (dim[1] > height) height = dim[1];
-				if (nC == 0) nC = dim[2];
-				else if (dim[2] != nC) throw new IllegalStateException("The generator accepts only images with the same number of channels");
-				if (dim[3] > 1 || dim[4] > 1) throw new IllegalStateException("The generator accepts only images with 1 frame and 1 slice");
+				nC[(i * getMaxListCount()) + j] = dim[2];
+				if (nCMax == 0) nCMax = dim[2];
+				if (dim[2] != nCMax) {
+					IJ.log("Warning: The generator detected different number of channels... Please check output");
+					if (dim[2] > nCMax) nCMax = dim[2];
+				}
+				if (dim[3] > 1 || dim[4] > 1) {
+					IJ.log("Warning: The generator detected multiple frames or slices in " + s);
+					IJ.log("Warning: Using the first slice and frame");
+				}
 			}
 		}
 
-		Virtual5DStack v5s = new Virtual5DStack(width, height, nC, nZ, nT);
+		Virtual5DStack v5s = new Virtual5DStack(width, height, nCMax, nZ, nT);
 
 		GenericDialog gd = new GenericDialog("Channel names");
 
-		for (int i = 0; i < nC; i++) {
+		for (int i = 0; i < nCMax; i++) {
 			gd.addStringField("" + (i + 1), "Channel " + (i + 1));
 		}
 
 		gd.showDialog();
 		if (!gd.wasCanceled()) {
-			for (int i = 0; i < nC; i++) {
+			for (int i = 0; i < nCMax; i++) {
 				String cName = gd.getNextString();
 				if (!cName.isEmpty()) v5s.setChannelName(i, cName);
 			}
@@ -140,11 +161,11 @@ public class CreateV5s extends PlugInFrame {
 			String[] fl = getListContent(i);
 			for (int j = 0;  j < fl.length; j++) {
 				File f = new File(folder, fl[j]);
-				for (int k = 0; k < nC; k++) {
+				for (int k = 0; k < nC[(i * getMaxListCount()) + j]; k++) {
 					if (byDim == "t") {
-						v5s.setElement(f, new int[]{k + 1, 1, 1}, new int[]{k + 1, j + 1, i + 1});
+						v5s.setElement(f, new int[]{k + 1, 1, 1}, new int[]{k + 1, j + 1, i + 1}, flipHCb.isSelected(), flipVCb.isSelected(), hashCb.isSelected());
 					} else {
-						v5s.setElement(f, new int[]{k + 1, 1, 1}, new int[]{k + 1, i + 1, j + 1});
+						v5s.setElement(f, new int[]{k + 1, 1, 1}, new int[]{k + 1, i + 1, j + 1}, flipHCb.isSelected(), flipVCb.isSelected(), hashCb.isSelected());
 					}
 				}		
 			}
@@ -153,6 +174,8 @@ public class CreateV5s extends PlugInFrame {
 		v5s.setName(v5s.guessName());
 		return v5s;
 	}
+	
+
 
 	class createListener implements ActionListener {
 		public void actionPerformed(ActionEvent e) {
@@ -197,7 +220,7 @@ public class CreateV5s extends PlugInFrame {
 
 			fc = new JFileChooser();
 			fc.setMultiSelectionEnabled(true);
-			fc.setCurrentDirectory(folder);
+			//fc.setCurrentDirectory(folder);
 			//Create the list and put it in a scroll pane.
 			list = new JList<String>(listModel);
 			list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
@@ -215,7 +238,7 @@ public class CreateV5s extends PlugInFrame {
 			rmBtn = new JButton(rmString);
 			rmBtn.setActionCommand(rmString);
 			rmBtn.addActionListener(new rmListener());
-
+			
 			//Create a panel that uses BoxLayout.
 			JPanel buttonPane = new JPanel();
 			buttonPane.setLayout(new BoxLayout(buttonPane,
@@ -241,11 +264,11 @@ public class CreateV5s extends PlugInFrame {
 		class rmListener implements ActionListener {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				for (int i : list.getSelectedIndices()) {
-					listModel.remove(i);
+				int[] selected = list.getSelectedIndices();
+				for (int i = selected.length; i > 0; i--) {
+					listModel.remove(selected[i - 1]);
 				}
 				int size = listModel.getSize();
-
 				if (size == 0) {
 					rmBtn.setEnabled(false);
 				} else {
@@ -260,7 +283,7 @@ public class CreateV5s extends PlugInFrame {
 			public void actionPerformed(ActionEvent e) {
 
 				int index = list.getSelectedIndex();
-				fc.setCurrentDirectory(folder);
+				if (folder != null) fc.setCurrentDirectory(folder);
 				int returnVal = fc.showOpenDialog(CreateV5s.this);
 				if (returnVal == JFileChooser.APPROVE_OPTION) {
 

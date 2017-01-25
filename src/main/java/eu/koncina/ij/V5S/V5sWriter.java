@@ -78,11 +78,15 @@ public class V5sWriter {
 				prevImg = v5s.getElementFile(i);
 				prevTargetPosition = targetPosition;
 				img = doc.createElement("image");
+				if (v5s.getElement(i).getFlipHorizontal()) img.setAttribute("flipHorizontal", "true");
+				if (v5s.getElement(i).getFlipVertical()) img.setAttribute("flipVertical", "true");
 				Element imgFilename = doc.createElement("filename");
 				Element imgZ = doc.createElement("z");
 				Element imgT = doc.createElement("t");
 				Element imgC = doc.createElement("c");
 				imgFilename.appendChild(doc.createTextNode(v5s.getElementFile(i).getName()));
+				String sha1 = v5s.getElement(i).getSha1();
+				if (sha1 != null) imgFilename.setAttribute("sha1", sha1);
 				imgZ.appendChild(doc.createTextNode(Integer.toString(targetPosition[1])));
 				imgT.appendChild(doc.createTextNode(Integer.toString(targetPosition[2])));
 				imgC.appendChild(doc.createTextNode(Integer.toString(v5s.getSourcePosition(i)[0])));
