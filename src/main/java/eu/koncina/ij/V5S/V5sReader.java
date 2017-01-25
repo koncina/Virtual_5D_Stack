@@ -23,8 +23,9 @@ import ij.IJ;
 public class V5sReader {
 	public Virtual5DStack loadFromXml(File f) {
 		int width, height, channels, slices, frames, bpp;
+		String relPath;
 		String[] channelNames;
-		
+
 		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
 		DocumentBuilder dBuilder;
 		Document doc = null;
@@ -48,7 +49,9 @@ public class V5sReader {
 			width = Integer.parseInt(infoElement.getElementsByTagName("width").item(0).getTextContent());
 			height = Integer.parseInt(infoElement.getElementsByTagName("height").item(0).getTextContent());
 			bpp = Integer.parseInt(infoElement.getElementsByTagName("bpp").item(0).getTextContent());
-
+			relPath = infoElement.getElementsByTagName("path").item(0).getTextContent();
+			if (relPath == null) relPath = "";
+			else relPath = relPath + "/";
 			Element tElement = (Element) infoElement.getElementsByTagName("frames").item(0);
 			frames = tElement.getElementsByTagName("frame").getLength();
 			if (frames == 0) frames = Integer.parseInt(tElement.getTextContent());
@@ -91,21 +94,21 @@ public class V5sReader {
 				Node fileNode =  imageElement.getElementsByTagName("filename").item(0);
 				Element fileElement = (Element) fileNode;
 				String filename = fileNode.getTextContent();
-				File imgFile = new File(f.getParent(), filename);
+				File imgFile = new File(f.getParent(), relPath + filename);
 				String sha1 = fileElement.getAttribute("sha1");
-				if (!imgFile.exists() && (imgFile = new File(f.getParent(), new File(filename).getName())).exists()) {
+				if (!imgFile.exists() && (imgFile = new File(f.getParent(), filename)).exists()) {
 					IJ.log("warning: " + new File(filename).getName() + " was found in the local path but not in the saved relative path");
 				} else if (!imgFile.exists()) {
 					IJ.error("Could not find " + imgFile.getName());
 					return null;
 				}
-				
+
 				if (sha1 != null) {
 					if (!Virtual5DStack.createSha1(imgFile).equals(sha1)) IJ.log("warning: sha1 checksum changed for " + imgFile.getName());
 				} else {
 					IJ.log("Warning: no sha1 checksum is stored in the v5s");
 				}
-				
+
 				// Mapping channels
 				NodeList c_list = imageElement.getElementsByTagName("c");
 				for (int c = 0; c < c_list.getLength(); c++) {
@@ -125,7 +128,7 @@ public class V5sReader {
 		v5s.setName(f.getName().replace(".v5s", ""));
 		return v5s;	
 	}
-	
+
 	public Virtual5DStack loadFromTxt(File txtFile) {
 		int n = 0;
 		int nFrames;
@@ -167,10 +170,10 @@ public class V5sReader {
 		} catch (Exception ex) {
 			return null;
 		}
-		
+
 		int[] dimMax = new int[3];
 		int[] dim = new int[3];
-		
+
 		for (int i = 0; i < fileList.size(); i++) {
 			if (fileList.get(i).getName().toLowerCase().equals("empty")) {
 				fileList.set(i, null);
@@ -184,25 +187,25 @@ public class V5sReader {
 				dimMax[1] = dim[1];
 			if (dimMax[2] == 0) dimMax[2] = dim[2];
 			else if (dim[2] != dimMax[2]) throw new IllegalStateException();
-			
+
 			if (dim[3] > 1 || dim[4] > 1) throw new IllegalStateException("input file can only contain 1 frame and 1 slice"); // Old file format limitation.
 
 		}
-		
+
 		if (fileList.size() != nSlices * nFrames) throw new IllegalStateException("fileList.size() != nSlices * nFrames");
-		
+
 		Virtual5DStack v5s = new Virtual5DStack(dimMax[0], dimMax[1], dimMax[2], nSlices, nFrames);
-		
+
 		for (int i = 0; i < fileList.size(); i++) {
 			for (int j = 0; j < dim[2]; j++) {
 				v5s.setElement(fileList.get(i), new int[]{j + 1, 1, 1}, i * dimMax[2] + j + 1);
 			}
 		}
-		
+
 		v5s.setName(txtFile.getName().replace(".v5s", ""));
 		return v5s;
 	}
-	
+
 	// From http://stackoverflow.com/a/453067
 	private static int countLines(File filename) throws IOException {
 		InputStream is = new BufferedInputStream(new FileInputStream(filename));

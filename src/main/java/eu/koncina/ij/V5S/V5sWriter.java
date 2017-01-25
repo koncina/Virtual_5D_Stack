@@ -103,6 +103,11 @@ public class V5sWriter {
 		bpp.appendChild(doc.createTextNode(Integer.toString(v5s.getDepth())));
 		info.appendChild(bpp);
 		
+		Element path = doc.createElement("path");
+		path.appendChild(doc.createTextNode(relativize(xml, v5s.getFolder())));
+		info.appendChild(path);
+		
+		
 		root.appendChild(info);
 		
 		// Add images
@@ -124,8 +129,8 @@ public class V5sWriter {
 				Element imgZ = doc.createElement("z");
 				Element imgT = doc.createElement("t");
 				Element imgC = doc.createElement("c");
-				//imgFilename.appendChild(doc.createTextNode(v5s.getElementFile(i).getName()));
-				imgFilename.appendChild(doc.createTextNode(relativize(xml, v5s.getElementFile(i))));
+				imgFilename.appendChild(doc.createTextNode(v5s.getElementFile(i).getName()));
+				//imgFilename.appendChild(doc.createTextNode(relativize(xml, v5s.getElementFile(i))));
 				String sha1 = v5s.getElement(i).getSha1();
 				if (sha1 != null) imgFilename.setAttribute("sha1", sha1);
 				imgZ.appendChild(doc.createTextNode(Integer.toString(targetPosition[1])));

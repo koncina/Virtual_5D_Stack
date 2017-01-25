@@ -35,7 +35,7 @@ public class CreateV5s extends PlugInFrame {
 	JCheckBox flipHCb = new JCheckBox("Horizontal flip");
 	JCheckBox flipVCb = new JCheckBox("Vertical flip");
 	JCheckBox hashCb = new JCheckBox("Generate Sha1 checksum", true);
-	
+
 
 	private static final long serialVersionUID = 1L;
 
@@ -66,7 +66,7 @@ public class CreateV5s extends PlugInFrame {
 			listPanel.add(pane);
 		}
 		JButton createBtn = new JButton("Create");
-		
+
 		createListener createListener = new createListener();
 		createBtn.addActionListener(createListener);
 		JPanel buttonPane = new JPanel();
@@ -97,18 +97,18 @@ public class CreateV5s extends PlugInFrame {
 		}
 		return count;	
 	}
-	
+
 	public Virtual5DStack createV5s() {
 		int width = 1;
 		int height = 1;
 		int bpp = 0;
 		int nT;
 		int nZ;
-		
+
 		int nLists = listPanel.getComponentCount();
-		
-		
-		
+
+
+
 		if (byDim == "t") {
 			nT = nLists;
 			nZ = getMaxListCount();
@@ -120,7 +120,7 @@ public class CreateV5s extends PlugInFrame {
 		int[] nC = new int[nT * nZ];
 		int nCMax = 0;
 		String[] cDescriptionList = null;
-		
+
 		if (nZ == 0 || nT == 0) return null;
 
 		for (int i = 0; i < nLists;  i++) {
@@ -164,7 +164,7 @@ public class CreateV5s extends PlugInFrame {
 		Virtual5DStack v5s = new Virtual5DStack(width, height, nCMax, nZ, nT);
 
 		GenericDialog gd = new GenericDialog("Channel names");
-		
+
 		for (int i = 0; i < nCMax; i++) {
 			gd.addStringField("Name " + (i + 1), "Channel " + (i + 1), 15);
 			String cDescription;
@@ -272,7 +272,7 @@ public class CreateV5s extends PlugInFrame {
 			rmBtn = new JButton(rmString);
 			rmBtn.setActionCommand(rmString);
 			rmBtn.addActionListener(new rmListener());
-			
+
 			//Create a panel that uses BoxLayout.
 			JPanel buttonPane = new JPanel();
 			buttonPane.setLayout(new BoxLayout(buttonPane,

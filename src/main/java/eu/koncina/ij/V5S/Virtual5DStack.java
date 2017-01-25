@@ -122,12 +122,12 @@ public class Virtual5DStack {
 		return name;
 	}
 	
-	public String getFolder() {
-		String folder = null;
+	public File getFolder() {
+		File folder = null;
 		for (int i =0; i < elements.length; i++) {
 			if (elements[i] == null) continue;
-			if (folder == null) folder = elements[i].getFile().getParent();
-			if (!folder.equals(elements[i].getFile().getParent())) {
+			if (folder == null) folder = elements[i].getFile().getParentFile();
+			if (!folder.equals(elements[i].getFile().getParentFile())) {
 				IJ.error("An error occured: v5s must be located in a same folder");
 			}
 		}
