@@ -115,15 +115,15 @@ public class V5sWriter {
 		root.appendChild(info);
 		
 		// Add images
+		Element images = doc.createElement("images");
 		File prevImg = new File("");
 		int[] prevTargetPosition = new int[3];
-
 		Element img = doc.createElement("image");
 		for (int i = 1; i <= v5s.getStackSize(); i++) {
 			if (v5s.getElement(i) == null) continue;
 			int[] targetPosition = v5s.convertIndexToPosition(i);
 			if ((!v5s.getElementFile(i).getName().equals(prevImg.getName())) || (prevTargetPosition[2] != targetPosition[2]) || (prevTargetPosition[1] != targetPosition[1])) {
-				if (img.hasChildNodes()) root.appendChild(img);
+				if (img.hasChildNodes()) images.appendChild(img);
 				prevImg = v5s.getElementFile(i);
 				prevTargetPosition = targetPosition;
 				img = doc.createElement("image");
@@ -153,9 +153,8 @@ public class V5sWriter {
 			}
 		}
 
-		
-		if (img.hasChildNodes()) root.appendChild(img);
-
+		if (img.hasChildNodes()) images.appendChild(img);
+		root.appendChild(images);
 		try {
 			Transformer tr = TransformerFactory.newInstance().newTransformer();
 			tr.setOutputProperty(OutputKeys.INDENT, "yes");

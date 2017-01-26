@@ -49,9 +49,12 @@ public class V5sReader {
 			width = Integer.parseInt(infoElement.getElementsByTagName("width").item(0).getTextContent());
 			height = Integer.parseInt(infoElement.getElementsByTagName("height").item(0).getTextContent());
 			bpp = Integer.parseInt(infoElement.getElementsByTagName("bpp").item(0).getTextContent());
-			relPath = infoElement.getElementsByTagName("path").item(0).getTextContent();
-			if (relPath == null) relPath = "";
-			else relPath = relPath + "/";
+			if (infoElement.getElementsByTagName("path").getLength() == 1) {
+				relPath = infoElement.getElementsByTagName("path").item(0).getTextContent();
+				relPath = relPath + "/";
+			} else {
+				relPath = "";
+			}
 			Element tElement = (Element) infoElement.getElementsByTagName("frames").item(0);
 			frames = tElement.getElementsByTagName("frame").getLength();
 			if (frames == 0) frames = Integer.parseInt(tElement.getTextContent());
@@ -84,7 +87,12 @@ public class V5sReader {
 		Virtual5DStack v5s = new Virtual5DStack(width, height, channels, slices, frames, bpp);
 		v5s.setChannelNames(channelNames);
 
-		NodeList imageList = doc.getElementsByTagName("image");
+		//NodeList imageList = doc.getElementsByTagName("image");
+		Element imagesElement = (Element) doc.getElementsByTagName("images").item(0);
+		NodeList imageList = imagesElement.getElementsByTagName("image");
+		
+		IJ.log("" + imageList.getLength());
+		
 		for (int i = 0; i < imageList.getLength(); i++) {
 			Node imageNode = imageList.item(i);
 			if (imageNode.getNodeType() == Node.ELEMENT_NODE) {
