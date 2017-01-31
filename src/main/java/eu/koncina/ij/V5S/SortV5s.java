@@ -93,7 +93,7 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 		montage.show();
 		thumbOffsetX = (montage.getWidth() * 3) / (4 * gridX * 2);
 		thumbOffsetY = (montage.getHeight() * 3) / (4 * gridY * 2);
-		
+
 		Integer id = new Integer(imp.getID());
 		Integer idMontage = new Integer(montage.getID());
 		if (images.contains(id)) {
@@ -135,57 +135,76 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 		//double mag = montage.getWindow().getCanvas().getMagnification();
 		int cellWidth = montage.getWidth() / gridX;
 		int nC = montage.getNChannels();
-		
+
 		if (p2 <= 0) {
 			CanvasResizer cr = new CanvasResizer();
 			montage.setStack(null, cr.expandStack(montage.getStack(), montage.getWidth() + cellWidth, montage.getHeight(), cellWidth, 0));
 			gridX = gridX + 1;
-			v5s.addSlice(0);
+			imp = v5s.addSlice(0, imp);
 			p1++;
 			p2 = 1;
 		} else if (p2 > gridX) {
 			CanvasResizer cr = new CanvasResizer();
 			montage.setStack(null, cr.expandStack(montage.getStack(), montage.getWidth() + cellWidth, montage.getHeight(), 0, 0));
 			gridX++;
-			v5s.addSlice();
+			imp = v5s.addSlice(imp);
 		}
-				
+
 		ImageStack targetCell = extractCell(new int[]{p2, frame}, montage);
 		for (int c = 0; c < nC; c++) {
 			montage.getStack().getProcessor(c + 1).insert(sourceCell.getProcessor(c + 1), (int) (p2 - 1) * montage.getWidth() / gridX, (int) (frame - 1) * montage.getHeight() / gridY);
 			montage.getStack().getProcessor(c + 1).insert(targetCell.getProcessor(c + 1), (int) (p1 - 1) * montage.getWidth() / gridX, (int) (frame - 1) * montage.getHeight() / gridY);
 		}
-		
+
+		// Swapping imp
+		int p1Stack = imp.getStackIndex(1, p1, frame);
+		int p2Stack = imp.getStackIndex(1, p2, frame);
+
+		ImageStack stack = imp.getImageStack();
+		for (int c = 0; c < nC; c++) {
+			ImageProcessor ipTmp = stack.getProcessor(p1Stack + c);
+			String labelTmp = stack.getSliceLabel(p1Stack + c);
+			stack.setProcessor(stack.getProcessor(p2Stack + c), p1Stack + c);
+			stack.setSliceLabel(stack.getSliceLabel(p2Stack + c), p1Stack + c);
+			stack.setProcessor(ipTmp, p2Stack + c);
+			stack.setSliceLabel(labelTmp, p2Stack + c);
+		}
+
+		imp.setStack(stack);
+
 		// array representing the slice (with c * t dimensions)
 		V5sElement[] tempElements = v5s.getElementsC(p1, frame);
 		v5s.setElementsC(v5s.getElementsC(p2, frame) , p1, frame);
 		v5s.setElementsC(tempElements , p2, frame);
-		//montage.getWindow().getCanvas().setMagnification(mag);
+
+		// montage.getWindow().getCanvas().setMagnification(mag);
 		montage.updateAndDraw();
 	}
-	
+
 	public void rmCells(int p) {
 		if (gridX == 1) return;
 		if (!v5s.isSliceEmpty(p)) {
 			int dialogButton = JOptionPane.YES_NO_OPTION;
-			int dialogResult = JOptionPane.showConfirmDialog (null, "Slice is not empty. Would you really like to remove the slice?", "Warning", dialogButton);
+			int dialogResult = JOptionPane.showConfirmDialog(null, "Slice is not empty. Do you really want to remove the slice?", "Warning", dialogButton);
 			if (dialogResult == JOptionPane.NO_OPTION) return;
 		}
-			
+
 		int cellWidth = montage.getWidth() / gridX;
 		for (int c = 0; c < montage.getNChannels(); c++) {
 			ImageProcessor ip = montage.getStack().getProcessor(c + 1);
 			ip.setRoi(p * cellWidth, 0, montage.getWidth() - (p * cellWidth), montage.getHeight());
 			ip.insert(ip.crop(), (int) (p - 1) * cellWidth, 0);
 		}
-		
+
 		CanvasResizer cr = new CanvasResizer();
 		this.montage.setStack(null, cr.expandStack(montage.getStack(), montage.getWidth() - cellWidth, montage.getHeight(), 0, 0));
-		v5s.delSlice(p);
+
+		imp = v5s.delSlice(p, imp);
+
 		gridX--;
 		montage.updateAndDraw();
 	}
-	
+
 	public int[] getGridPosition(int mouseX, int mouseY) {
 		int col = 0;
 		int row = 0;
@@ -261,21 +280,19 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 	@Override
 	public void imageClosed(ImagePlus imp) {
 		if (imp.getID() == this.montage.getID()) {
-			try {
-				this.imp = v5s.load(); // Would be more efficient to move the slices in imp
-									   // instead of reloading from scratch...
-			} catch (Exception e) {
-				IJ.error("Could not reload V5s");
-			}
-			SaveDialog sd = new SaveDialog("Save V5S", v5s.getFolder().toString(), v5s.getName(), ".v5s");
-			V5sWriter v5sw  = new V5sWriter();
-			try {
-				v5sw.writeXml(v5s, new File(sd.getDirectory(), sd.getFileName()));
-			} catch (Exception e) {
-				IJ.log("Did not save v5s file...");
-			}
 			ImagePlus.removeImageListener(this);
+			this.imp.setProperty("v5s", v5s);
 			this.imp.show();
+			this.imp.updateAndRepaintWindow();
+			if (v5s.changes) {
+				SaveDialog sd = new SaveDialog("Save V5S", v5s.getFolder().toString(), v5s.getName(), ".v5s");
+				V5sWriter v5sw  = new V5sWriter();
+				try {
+					v5sw.writeXml(v5s, new File(sd.getDirectory(), sd.getFileName()));
+				} catch (Exception e) {
+					IJ.log("Did not save v5s file...");
+				}
+			}
 		}
 	}
 

@@ -37,7 +37,7 @@ public class Virtual5DStack {
 	private String[] channelNames;
 	private String[] channelDescriptions;
 	private boolean[] channelStates;
-	
+
 	public boolean changes = false;
 
 	public Virtual5DStack() {
@@ -56,7 +56,7 @@ public class Virtual5DStack {
 			setChannelState(c, true);
 		}
 	}
-	
+
 	public Virtual5DStack(int width, int height, int nChannels, int nSlices, int nFrames, String name) {
 		this(width, height, nChannels, nSlices, nFrames, 16, name);
 	}
@@ -64,7 +64,7 @@ public class Virtual5DStack {
 	public Virtual5DStack(int width, int height, int nChannels, int nSlices, int nFrames) {
 		this(width, height, nChannels, nSlices, nFrames, 16, "New");
 	}
-	
+
 	public Virtual5DStack(int width, int height, int nChannels, int nSlices, int nFrames, int bpp) {
 		this(width, height, nChannels, nSlices, nFrames, bpp, "New");
 	}
@@ -123,7 +123,7 @@ public class Virtual5DStack {
 	public String getName() {
 		return name;
 	}
-	
+
 	public File getFolder() {
 		File folder = null;
 		for (int i =0; i < elements.length; i++) {
@@ -143,7 +143,7 @@ public class Virtual5DStack {
 	public int getHeight() {
 		return dimension[1];
 	}
-	
+
 	public int getNChannels() {
 		return dimension[2];
 	}
@@ -155,7 +155,7 @@ public class Virtual5DStack {
 	public int getNFrames() {
 		return dimension[4];
 	}
-	
+
 	public int getDepth() {
 		return dimension[5];
 	}
@@ -194,7 +194,7 @@ public class Virtual5DStack {
 		}
 		return dimension;
 	}
-	
+
 	public static String[] getChannelDescription(File f) {
 		if (f == null)
 			return null;
@@ -220,12 +220,12 @@ public class Virtual5DStack {
 		}
 		return new String[nC];
 	}
-	
+
 
 	public String[] getChannelNames() {
 		return channelNames;
 	}
-	
+
 	public String[] getChannelDescriptions() {
 		return channelDescriptions;
 	}
@@ -288,39 +288,39 @@ public class Virtual5DStack {
 		}
 		return true;
 	}
-	
+
 	// From http://stackoverflow.com/a/9855338
 	final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
 	public static String bytesToHex(byte[] bytes) {
-	    char[] hexChars = new char[bytes.length * 2];
-	    for ( int j = 0; j < bytes.length; j++ ) {
-	        int v = bytes[j] & 0xFF;
-	        hexChars[j * 2] = hexArray[v >>> 4];
-	        hexChars[j * 2 + 1] = hexArray[v & 0x0F];
-	    }
-	    return new String(hexChars);
+		char[] hexChars = new char[bytes.length * 2];
+		for ( int j = 0; j < bytes.length; j++ ) {
+			int v = bytes[j] & 0xFF;
+			hexChars[j * 2] = hexArray[v >>> 4];
+			hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+		}
+		return new String(hexChars);
 	}
-	
+
 	// From http://stackoverflow.com/a/6293816
 	public static String createSha1(File file) {
-	    try {
-	    	MessageDigest digest = MessageDigest.getInstance("SHA-1");
-	    	InputStream fis = new FileInputStream(file);
-		    int n = 0;
-		    byte[] buffer = new byte[8192];
-		    while (n != -1) {
-		        n = fis.read(buffer);
-		        if (n > 0) {
-		            digest.update(buffer, 0, n);
-		        }
-		    }
-		    fis.close();
-		    return bytesToHex(digest.digest());
-	    } catch (Exception e) {
-	    	return "Could no generate Sha1 checksum";
-	    }
+		try {
+			MessageDigest digest = MessageDigest.getInstance("SHA-1");
+			InputStream fis = new FileInputStream(file);
+			int n = 0;
+			byte[] buffer = new byte[8192];
+			while (n != -1) {
+				n = fis.read(buffer);
+				if (n > 0) {
+					digest.update(buffer, 0, n);
+				}
+			}
+			fis.close();
+			return bytesToHex(digest.digest());
+		} catch (Exception e) {
+			return "Could no generate Sha1 checksum";
+		}
 	}
-	
+
 	public void setName(String name) {
 		this.name = name;
 	}
@@ -352,7 +352,7 @@ public class Virtual5DStack {
 		}
 		dimension[4] = dimension[4] - 1;
 	}
-	
+
 	public void addFrame(int n) {
 		if (n < 0 || n > getNFrames())
 			throw new IllegalArgumentException("n out of range: " + n);
@@ -392,16 +392,24 @@ public class Virtual5DStack {
 		}
 		dimension[3] = dimension[3] - 1;
 	}
-	
-//	public void delSlice(int n, ImagePlus imp) {
-//		delSlice(n);
-//		ImageStack stack = imp.getImageStack();
-//		for (int i = getNFrames(); i > 0; i--) {
-//			for (int j = getNChannels(); j > 0; j--) {
-//				stack.deleteSlice(imp.getStackIndex(j, n, i));
-//			}
-//		}	
-//	}
+
+	public ImagePlus delSlice(int n, ImagePlus imp) {
+		delSlice(n);
+		int nC = imp.getNChannels();
+		int nT = imp.getNFrames();
+		int nZ = imp.getNSlices();
+		ImageStack stack = imp.getImageStack();
+		for (int i = nT; i > 0; i--) {
+			int pos = imp.getStackIndex(1, n, i);
+			for (int c = 0; c < nC; c++) {
+				IJ.log("stack size is " + stack.getSize());
+				stack.deleteSlice(pos);
+			}
+		}
+		imp.setStack(stack);
+		imp.setDimensions(nC, nZ - 1, nT);
+		return imp;
+	}
 
 	public void addSlice(int n) {
 		int nC = getNChannels();
@@ -430,6 +438,34 @@ public class Virtual5DStack {
 		dimension[3] = dimension[3] + 1;	
 	}
 
+	public ImagePlus addSlice(int n, ImagePlus imp) {
+		addSlice(n);
+		ImageStack stack = imp.getImageStack();
+		short[] pixels = new short[dimension[0] * dimension[1]];
+		ImageProcessor emptyProcessor = new ShortProcessor(dimension[0], dimension[1], pixels, null);
+		if (dimension[5] == 8) {
+			emptyProcessor = emptyProcessor.convertToByteProcessor();
+		}
+
+		for (int i = dimension[4]; i > 0; i--) {
+			int pos = imp.getStackIndex(1, n, i);
+			if (n == 0) pos = pos - dimension[2];
+			for (int j = 0; j < dimension[2]; j++) {
+				stack.addSlice("missing", emptyProcessor, pos + dimension[2] - 1);
+			}
+		}
+		imp.setStack(stack);
+		imp.setDimensions(dimension[2], dimension[3], dimension[4]);
+
+		if (imp.getZ() > n) imp.setPositionWithoutUpdate(imp.getC(), imp.getZ() + 1, imp.getT());
+		return imp;
+
+	}
+
+	public ImagePlus addSlice(ImagePlus imp) {
+		return addSlice(getNSlices(), imp);
+	}
+
 	public void addSlice() {
 		addSlice(getNSlices());
 	}
@@ -450,7 +486,7 @@ public class Virtual5DStack {
 		int n = getStackIndex(stackPos[0], stackPos[1], stackPos[2]);
 		setElement(new V5sElement(fileName, srcPos, flipHorizontal, flipVertical), n);
 	}
-	
+
 	public void setElement(File fileName, int[] srcPos, int[] stackPos, boolean flipHorizontal, boolean flipVertical, boolean doHash) {
 		int n = getStackIndex(stackPos[0], stackPos[1], stackPos[2]);
 		setElement(new V5sElement(fileName, srcPos, flipHorizontal, flipVertical, doHash), n);
@@ -470,7 +506,7 @@ public class Virtual5DStack {
 	public void setChannelName(int cIndex, String cName) {
 		channelNames[cIndex] = cName;
 	}
-	
+
 	public void setChannelNames(String[] cNames) {
 		if (cNames.length != dimension[2]) throw new IllegalArgumentException("Invalid number of channels");
 		channelNames = cNames;
@@ -543,14 +579,14 @@ public class Virtual5DStack {
 			this.flipHorizontal = flipHorizontal;
 			this.flipVertical = flipVertical;
 		}
-		
+
 		V5sElement(File file, int[] srcPos, boolean flipHorizontal, boolean flipVertical, boolean doSha1) {
 			this.file = file;
 			this.srcPos = srcPos;
 			this.flipHorizontal = flipHorizontal;
 			this.flipVertical = flipVertical;
 			if (doSha1 == true) this.sha1 = createSha1(file);
-			
+
 		}
 
 		public V5sElement() {
@@ -564,7 +600,7 @@ public class Virtual5DStack {
 			if (file == null) return "empty";
 			return file.getName();
 		}
-		
+
 		public String getSha1() {
 			return sha1;
 		}
@@ -597,7 +633,7 @@ public class Virtual5DStack {
 		public void setFlipVertical(boolean flipVertical) {
 			this.flipVertical = flipVertical;
 		}
-		
+
 		public void doSha1() {
 			sha1 = createSha1(file);
 		}

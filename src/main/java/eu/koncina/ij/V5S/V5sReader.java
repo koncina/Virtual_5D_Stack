@@ -91,8 +91,6 @@ public class V5sReader {
 		Element imagesElement = (Element) doc.getElementsByTagName("images").item(0);
 		NodeList imageList = imagesElement.getElementsByTagName("image");
 		
-		IJ.log("" + imageList.getLength());
-		
 		for (int i = 0; i < imageList.getLength(); i++) {
 			Node imageNode = imageList.item(i);
 			if (imageNode.getNodeType() == Node.ELEMENT_NODE) {

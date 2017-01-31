@@ -24,13 +24,11 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
 import ij.IJ;
-import ij.ImageListener;
 import ij.ImagePlus;
 import ij.gui.GenericDialog;
-import ij.io.SaveDialog;
 import ij.plugin.frame.PlugInFrame;
 
-public class CreateV5s extends PlugInFrame implements ImageListener {
+public class CreateV5s extends PlugInFrame {
 
 	JPanel listPanel;
 	File folder = null;
@@ -208,7 +206,6 @@ public class CreateV5s extends PlugInFrame implements ImageListener {
 				}		
 			}
 		}
-
 		v5s.setName(v5s.guessName());
 		v5s.changes = true;
 		return v5s;
@@ -221,7 +218,6 @@ public class CreateV5s extends PlugInFrame implements ImageListener {
 			this.v5s = v5s;
 			imp = v5s.load();
 			imp.show();
-			ImagePlus.addImageListener(this);
 		} catch (Exception e1) {
 			IJ.error("Could not generate Virtual 5D Stack");
 		}
@@ -262,14 +258,10 @@ public class CreateV5s extends PlugInFrame implements ImageListener {
 
 			listModel = new DefaultListModel<String>();
 
-
 			fc = new JFileChooser();
 			fc.setMultiSelectionEnabled(true);
-			//fc.setCurrentDirectory(folder);
-			//Create the list and put it in a scroll pane.
 			list = new JList<String>(listModel);
 			list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-			//list.setSelectedIndex(0);
 			list.addListSelectionListener(this);
 			list.setVisibleRowCount(5);
 			JScrollPane listScrollPane = new JScrollPane(list);
@@ -342,7 +334,6 @@ public class CreateV5s extends PlugInFrame implements ImageListener {
 						listModel.insertElementAt(f.getName(), index);
 					}
 				} 			
-
 				list.setSelectedIndex(index);
 				list.ensureIndexIsVisible(index);
 			}
@@ -362,28 +353,5 @@ public class CreateV5s extends PlugInFrame implements ImageListener {
 				}
 			}
 		}
-	}
-
-	@Override
-	public void imageClosed(ImagePlus imp) {
-		if (imp.getID() == this.imp.getID() && v5s.changes) {
-			ImagePlus.removeImageListener(this);
-			SaveDialog sd = new SaveDialog("Save V5S", v5s.getFolder().toString(), v5s.getName(), ".v5s");
-			V5sWriter v5sw  = new V5sWriter();
-			try {
-				v5sw.writeXml(v5s, new File(sd.getDirectory(), sd.getFileName()));
-			} catch (Exception e) {
-				IJ.log("Did not save v5s file...");
-			}
-		}
-		
-	}
-
-	@Override
-	public void imageOpened(ImagePlus arg0) {
-	}
-
-	@Override
-	public void imageUpdated(ImagePlus arg0) {
 	}
 }

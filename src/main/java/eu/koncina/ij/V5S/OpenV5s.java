@@ -9,7 +9,7 @@ import ij.io.OpenDialog;
 import ij.plugin.PlugIn;
 
 public class OpenV5s extends ImagePlus  implements PlugIn {
-
+	
 	ConsoleOutputCapturer hideMsg = new ConsoleOutputCapturer();
 
 	public void run(String arg) {
