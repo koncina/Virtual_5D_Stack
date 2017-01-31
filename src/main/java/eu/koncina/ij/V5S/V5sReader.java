@@ -19,6 +19,8 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import ij.IJ;
+import ij.gui.Roi;
+import ij.io.RoiDecoder;
 
 public class V5sReader {
 	public Virtual5DStack loadFromXml(File f) {
@@ -90,7 +92,7 @@ public class V5sReader {
 		//NodeList imageList = doc.getElementsByTagName("image");
 		Element imagesElement = (Element) doc.getElementsByTagName("images").item(0);
 		NodeList imageList = imagesElement.getElementsByTagName("image");
-		
+
 		for (int i = 0; i < imageList.getLength(); i++) {
 			Node imageNode = imageList.item(i);
 			if (imageNode.getNodeType() == Node.ELEMENT_NODE) {
@@ -126,11 +128,29 @@ public class V5sReader {
 						int[] stackPos = new int[]{cPos, zPos, tPos};
 						v5s.setElement(imgFile, srcPos, stackPos,
 								Boolean.parseBoolean(imageElement.getAttribute("flipHorizontal")),
-								Boolean.parseBoolean(imageElement.getAttribute("flipVertical")));
+								Boolean.parseBoolean(imageElement.getAttribute("flipVertical")), sha1);
 					}
 				}
 			}
 		}
+
+		// Reading RoiSets
+		NodeList roiSetList = doc.getElementsByTagName("roiset");
+		for (int i = 0; i < roiSetList.getLength(); i++) {
+			Node roiSetNode = roiSetList.item(i);
+			if (roiSetNode.getNodeType() != Node.ELEMENT_NODE) continue;
+			Element roiSetElement = (Element) roiSetNode;
+			String name = roiSetElement.getAttribute("name");
+			NodeList roiList = roiSetElement.getElementsByTagName("roi");
+			for (int j = 0; j < roiList.getLength(); j++) {
+				Node roiNode = roiList.item(j);
+				if (roiNode.getNodeType() != Node.ELEMENT_NODE) continue;
+				Element roiElement = (Element) roiNode;
+				Roi r = RoiDecoder.openFromByteArray(Virtual5DStack.hexToBytes(roiElement.getTextContent()));
+				v5s.setRoi(r.getCPosition(), r.getZPosition(), r.getTPosition(), r, name);
+			}			
+		}
+
 		v5s.setName(f.getName().replace(".v5s", ""));
 		return v5s;	
 	}

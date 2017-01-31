@@ -57,7 +57,7 @@ public class CreateV5s extends PlugInFrame {
 		byDim = gd.getNextChoice();
 		int size = (int) gd.getNextNumber();
 
-		this.setSize(700, 400);
+		this.setSize(300 * size, 400);
 
 		listPanel = new JPanel();
 		listPanel.setLayout(new GridLayout(0, size));
@@ -81,6 +81,7 @@ public class CreateV5s extends PlugInFrame {
 		buttonPane.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 		this.add(listPanel, BorderLayout.CENTER);
 		this.add(buttonPane, BorderLayout.PAGE_END);
+		this.setLocationByPlatform(true);
 		this.setVisible(true);
 	}
 

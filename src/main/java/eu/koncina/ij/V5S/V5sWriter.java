@@ -3,7 +3,8 @@ package eu.koncina.ij.V5S;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-import ij.IJ;
+import ij.gui.Roi;
+import ij.io.RoiEncoder;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -155,6 +156,20 @@ public class V5sWriter {
 
 		if (img.hasChildNodes()) images.appendChild(img);
 		root.appendChild(images);
+		
+		// Getting Rois
+		String[] roiSetNames = v5s.getRoiSetNames();
+		for (int i = 0; i < roiSetNames.length; i++) {
+			Element rois = doc.createElement("roiset");
+			rois.setAttribute("name", roiSetNames[i]);
+			for (Roi r : v5s.getRoiSet(roiSetNames[i])) {
+				Element roi = doc.createElement("roi");
+				roi.appendChild(doc.createTextNode(Virtual5DStack.bytesToHex(RoiEncoder.saveAsByteArray(r))));
+				rois.appendChild(roi);
+			}
+			root.appendChild(rois);
+		}
+		
 		try {
 			Transformer tr = TransformerFactory.newInstance().newTransformer();
 			tr.setOutputProperty(OutputKeys.INDENT, "yes");

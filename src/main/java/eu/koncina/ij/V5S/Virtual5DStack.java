@@ -5,12 +5,15 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Hashtable;
 
 import ij.CompositeImage;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
+import ij.gui.Roi;
 import ij.plugin.CanvasResizer;
 import ij.process.ImageProcessor;
 import ij.process.ShortProcessor;
@@ -37,6 +40,8 @@ public class Virtual5DStack {
 	private String[] channelNames;
 	private String[] channelDescriptions;
 	private boolean[] channelStates;
+
+	private ArrayList<String> roiSetNames = new ArrayList<String>();
 
 	public boolean changes = false;
 
@@ -230,6 +235,23 @@ public class Virtual5DStack {
 		return channelDescriptions;
 	}
 
+	public String[] getRoiSetNames() {
+		return (String[]) roiSetNames.toArray(new String[roiSetNames.size()]);
+	}
+
+	public Roi[] getRoiSet(String setName) {
+		ArrayList<Roi> roiList = new ArrayList<Roi>();
+		for (int i = 0; i < elements.length; i++) {
+			if (elements[i] == null) continue;
+			Roi r = elements[i].getRoi(setName);
+			// Updating Roi position: It is possible that we moved slices...
+			int[] p = convertIndexToPosition(i + 1);
+			r.setPosition(p[0], p[1], p[2]);
+			if (r != null) roiList.add(r);
+		}
+		return (Roi[]) roiList.toArray(new Roi[roiList.size()]);
+	}
+
 	public V5sElement getElement(int n) {
 		if (n < 1 || n > getStackSize())
 			throw new IllegalArgumentException("n out of range: " + n);
@@ -299,6 +321,17 @@ public class Virtual5DStack {
 			hexChars[j * 2 + 1] = hexArray[v & 0x0F];
 		}
 		return new String(hexChars);
+	}
+
+	//From http://stackoverflow.com/a/140861
+	public static byte[] hexToBytes(String s) {
+		int len = s.length();
+		byte[] data = new byte[len / 2];
+		for (int i = 0; i < len; i += 2) {
+			data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+					+ Character.digit(s.charAt(i + 1), 16));
+		}
+		return data;
 	}
 
 	// From http://stackoverflow.com/a/6293816
@@ -402,7 +435,6 @@ public class Virtual5DStack {
 		for (int i = nT; i > 0; i--) {
 			int pos = imp.getStackIndex(1, n, i);
 			for (int c = 0; c < nC; c++) {
-				IJ.log("stack size is " + stack.getSize());
 				stack.deleteSlice(pos);
 			}
 		}
@@ -491,6 +523,11 @@ public class Virtual5DStack {
 		int n = getStackIndex(stackPos[0], stackPos[1], stackPos[2]);
 		setElement(new V5sElement(fileName, srcPos, flipHorizontal, flipVertical, doHash), n);
 	}
+	
+	public void setElement(File fileName, int[] srcPos, int[] stackPos, boolean flipHorizontal, boolean flipVertical, String sha1) {
+		int n = getStackIndex(stackPos[0], stackPos[1], stackPos[2]);
+		setElement(new V5sElement(fileName, srcPos, flipHorizontal, flipVertical, sha1), n);
+	}
 
 	public void setElement(V5sElement slice, int n) {
 		if (n < 1 || n > nElements)
@@ -514,6 +551,11 @@ public class Virtual5DStack {
 
 	public void setChannelState(int channel, boolean state) {
 		channelStates[channel] = state;
+	}
+
+	public void setRoi(int channel, int slice, int frame, Roi r, String setName) {
+		int n = getStackIndex(channel, slice, frame);
+		elements[n - 1].setRoi(setName, r);
 	}
 
 	public ImagePlus load() throws FormatException, IOException {
@@ -572,6 +614,7 @@ public class Virtual5DStack {
 		private int[] srcPos = new int[3];
 		private boolean flipHorizontal = false;
 		private boolean flipVertical = false;
+		HashMap<String, Roi> roi = new HashMap<String, Roi>();
 
 		V5sElement(File file, int[] srcPos, boolean flipHorizontal, boolean flipVertical) {
 			this.file = file;
@@ -581,12 +624,13 @@ public class Virtual5DStack {
 		}
 
 		V5sElement(File file, int[] srcPos, boolean flipHorizontal, boolean flipVertical, boolean doSha1) {
-			this.file = file;
-			this.srcPos = srcPos;
-			this.flipHorizontal = flipHorizontal;
-			this.flipVertical = flipVertical;
+			this(file, srcPos, flipHorizontal, flipVertical);
 			if (doSha1 == true) this.sha1 = createSha1(file);
-
+		}
+		
+		V5sElement(File file, int[] srcPos, boolean flipHorizontal, boolean flipVertical, String sha1) {
+			this(file, srcPos, flipHorizontal, flipVertical);
+			this.sha1 = sha1;
 		}
 
 		public V5sElement() {
@@ -617,6 +661,10 @@ public class Virtual5DStack {
 			return flipVertical;
 		}
 
+		public Roi getRoi(String setName) {
+			return roi.get(setName);
+		}
+
 		public void setFileName(File file) {
 			this.file = file;
 		}
@@ -636,6 +684,15 @@ public class Virtual5DStack {
 
 		public void doSha1() {
 			sha1 = createSha1(file);
+		}
+
+		public void setRoi(String setName, Roi r) {
+			if (!roiSetNames.contains(setName)) roiSetNames.add(setName);
+			roi.put(setName, r);
+		}
+
+		public void rmRoi(String setName) {
+			roi.remove(setName);
 		}
 	}  
 }
