@@ -90,6 +90,7 @@ public class V5sReader {
 
 		} catch (Exception e) {
 			IJ.error("Could not load Xml file informations");
+			IJ.showStatus("");
 			return null;
 		}
 
@@ -100,8 +101,10 @@ public class V5sReader {
 		//NodeList imageList = doc.getElementsByTagName("image");
 		Element imagesElement = (Element) doc.getElementsByTagName("images").item(0);
 		NodeList imageList = imagesElement.getElementsByTagName("image");
-
-		for (int i = 0; i < imageList.getLength(); i++) {
+		IJ.showStatus("Reading v5s images...");
+		int imgListLen = imageList.getLength();
+		for (int i = 0; i < imgListLen; i++) {
+			IJ.showProgress(i, imgListLen);
 			Node imageNode = imageList.item(i);
 			if (imageNode.getNodeType() == Node.ELEMENT_NODE) {
 				Element imageElement = (Element) imageNode;
@@ -116,6 +119,7 @@ public class V5sReader {
 					IJ.log("warning: " + new File(filename).getName() + " was found in the local path but not in the saved relative path");
 				} else if (!imgFile.exists()) {
 					IJ.error("Could not find " + imgFile.getName());
+					IJ.showStatus("");
 					return null;
 				}
 
@@ -142,6 +146,7 @@ public class V5sReader {
 			}
 		}
 
+		IJ.showStatus("Reading v5s ROIs...");
 		// Reading RoiSets
 		NodeList roiSetList = doc.getElementsByTagName("roiset");
 		for (int i = 0; i < roiSetList.getLength(); i++) {
@@ -175,8 +180,8 @@ public class V5sReader {
 				v5s.setRoi(r.getCPosition(), r.getZPosition(), r.getTPosition(), r, name);
 			}			
 		}
-
-		//v5s.setName(f.getName().replace(".v5s", ""));
+		IJ.showStatus("");
+		IJ.showProgress(2);
 		return v5s;	
 	}
 
