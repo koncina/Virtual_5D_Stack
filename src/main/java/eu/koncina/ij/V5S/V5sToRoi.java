@@ -15,7 +15,9 @@ public class V5sToRoi extends ImagePlus implements PlugIn {
 		if (null == imp) return;
 		Virtual5DStack v5s = (Virtual5DStack) imp.getProperty("v5s");
 		if (v5s.getRoiSetNames().length == 0) return;
-		RoiManager rm = new RoiManager();
+		RoiManager rm = RoiManager.getInstance();
+		if (rm == null) rm = new RoiManager();
+		
 		GenericDialog gd = new GenericDialog("Roi set name");
 		String[] setNames = v5s.getRoiSetNames();
 
@@ -25,10 +27,9 @@ public class V5sToRoi extends ImagePlus implements PlugIn {
 	    String name = gd.getNextChoice();
 	    
 	    Roi[] roiSet = v5s.getRoiSet(name);
-	    for (Roi r : roiSet) {
-	    	rm.add(imp, r, -1);
+	    for (int i = 0; i < roiSet.length; i++) {
+	    	Roi r = roiSet[i];
+	    	rm.add(imp, r, i + 1);
 	    }
-		
 	}
-
 }

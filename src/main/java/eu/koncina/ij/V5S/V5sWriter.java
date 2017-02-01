@@ -3,6 +3,7 @@ package eu.koncina.ij.V5S;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
+import ij.IJ;
 import ij.gui.Roi;
 import ij.io.RoiEncoder;
 
@@ -21,40 +22,44 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import java.io.*;
+import java.util.*;
+import java.util.zip.*;
+
 public class V5sWriter {
 
 	private static final String PLUGIN_VERSION = "0.2";
-	
-	 // Adapted from http://stackoverflow.com/a/10802188
-	 private static String relativize(File v5sFile, File imgFile) {
-		  // Split paths into segments
-		  String[] bParts = v5sFile.getPath().split("\\/");
-		  String[] cParts = imgFile.getPath().split("\\/");
 
-		  // Discard trailing segment of base path
-		  if (bParts.length > 0 && !v5sFile.getPath().endsWith("/")) {
-		    bParts = Arrays.copyOf(bParts, bParts.length - 1);
-		  }
+	// Adapted from http://stackoverflow.com/a/10802188
+	private static String relativize(File v5sFile, File imgFile) {
+		// Split paths into segments
+		String[] bParts = v5sFile.getPath().split("\\/");
+		String[] cParts = imgFile.getPath().split("\\/");
 
-		  // Remove common prefix segments
-		  int i = 0;
-		  while (i < bParts.length && i < cParts.length && bParts[i].equals(cParts[i])) {
-		    i++;
-		  }
-
-		  // Construct the relative path
-		  StringBuilder sb = new StringBuilder();
-		  for (int j = 0; j < (bParts.length - i); j++) {
-		    sb.append("../");
-		  }
-		  for (int j = i; j < cParts.length; j++) {
-		    if (j != i) {
-		      sb.append("/");
-		    }
-		    sb.append(cParts[j]);
-		  }
-		  return sb.toString();
+		// Discard trailing segment of base path
+		if (bParts.length > 0 && !v5sFile.getPath().endsWith("/")) {
+			bParts = Arrays.copyOf(bParts, bParts.length - 1);
 		}
+
+		// Remove common prefix segments
+		int i = 0;
+		while (i < bParts.length && i < cParts.length && bParts[i].equals(cParts[i])) {
+			i++;
+		}
+
+		// Construct the relative path
+		StringBuilder sb = new StringBuilder();
+		for (int j = 0; j < (bParts.length - i); j++) {
+			sb.append("../");
+		}
+		for (int j = i; j < cParts.length; j++) {
+			if (j != i) {
+				sb.append("/");
+			}
+			sb.append(cParts[j]);
+		}
+		return sb.toString();
+	}
 
 	public void writeXml(Virtual5DStack v5s, File xml) throws ParserConfigurationException {
 		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
@@ -101,20 +106,20 @@ public class V5sWriter {
 			channels.appendChild(channel);
 		}
 		info.appendChild(channels);
-		
+
 		Element bpp = doc.createElement("bpp");
 		bpp.appendChild(doc.createTextNode(Integer.toString(v5s.getDepth())));
 		info.appendChild(bpp);
-		
+
 		String relPath = relativize(xml, v5s.getFolder());
 		if (!relPath.isEmpty()) {
 			Element path = doc.createElement("path");
 			path.appendChild(doc.createTextNode(relPath));
 			info.appendChild(path);
 		}
-		
+
 		root.appendChild(info);
-		
+
 		// Add images
 		Element images = doc.createElement("images");
 		File prevImg = new File("");
@@ -156,20 +161,41 @@ public class V5sWriter {
 
 		if (img.hasChildNodes()) images.appendChild(img);
 		root.appendChild(images);
-		
+
 		// Getting Rois
+
+		// To reduce the size of Xml files, the ROIs are compressed using zlib and stored as base64 strings
+		// Zlib method from https://dzone.com/articles/how-compress-and-uncompress
+
 		String[] roiSetNames = v5s.getRoiSetNames();
 		for (int i = 0; i < roiSetNames.length; i++) {
 			Element rois = doc.createElement("roiset");
 			rois.setAttribute("name", roiSetNames[i]);
 			for (Roi r : v5s.getRoiSet(roiSetNames[i])) {
 				Element roi = doc.createElement("roi");
-				roi.appendChild(doc.createTextNode(Virtual5DStack.bytesToHex(RoiEncoder.saveAsByteArray(r))));
+				byte[] byteData = RoiEncoder.saveAsByteArray(r);
+				Deflater deflater = new Deflater();
+				deflater.setInput(byteData);
+				ByteArrayOutputStream outputStream = new ByteArrayOutputStream(byteData.length);
+				deflater.finish();
+				byte[] buffer = new byte[1024];   
+				while (!deflater.finished()) {
+					int count = deflater.deflate(buffer);
+					outputStream.write(buffer, 0, count);   
+				}
+				try {
+					outputStream.close();
+				} catch (IOException e) {
+					IJ.error("Could not compress ROI...");
+				}  
+				byte[] b64Roi = Base64.getEncoder().encode(outputStream.toByteArray());
+				roi.appendChild(doc.createTextNode(new String(b64Roi)));
+
 				rois.appendChild(roi);
 			}
 			root.appendChild(rois);
 		}
-		
+
 		try {
 			Transformer tr = TransformerFactory.newInstance().newTransformer();
 			tr.setOutputProperty(OutputKeys.INDENT, "yes");

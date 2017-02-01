@@ -1,5 +1,8 @@
 package eu.koncina.ij.V5S;
 
+import java.io.File;
+
+import ij.IJ;
 import ij.ImagePlus;
 import ij.WindowManager;
 import ij.gui.GenericDialog;
@@ -25,7 +28,16 @@ public class RoiToV5s extends ImagePlus implements PlugIn {
 
 		for (int i = 0; i < roiSet.length; i++) {
 			Roi r = roiSet[i];
-			v5s.setRoi(r.getCPosition(), r.getZPosition(), r.getTPosition(), r, name);
+			int cPos = r.getCPosition();
+			int zPos = r.getZPosition();
+			int tPos = r.getTPosition();
+			File file = v5s.getElementFile(cPos, zPos, tPos);
+			if (file == null) {
+				IJ.log("Warning: Did not store ROI for empty file at position c=" + cPos + " z=" + zPos + " t=" + tPos);
+				continue;
+			}
+			r.setName(file.getName());
+			v5s.setRoi(cPos, zPos, tPos, r, name);
 		}
 
 		imp.setProperty("v5s", v5s);

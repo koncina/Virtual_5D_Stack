@@ -174,6 +174,10 @@ public class Virtual5DStack {
 			throw new IllegalArgumentException("n out of range: " + n);
 		return elements[n - 1].getFile();
 	}
+	
+	public File getElementFile(int channel, int slice, int frame) {
+		return getElementFile(getStackIndex(channel, slice, frame));
+	}
 
 	public int[] getSourcePosition(int n) {
 		if (n < 1 || n > getStackSize())
@@ -244,10 +248,11 @@ public class Virtual5DStack {
 		for (int i = 0; i < elements.length; i++) {
 			if (elements[i] == null) continue;
 			Roi r = elements[i].getRoi(setName);
+			if (r == null) continue;
 			// Updating Roi position: It is possible that we moved slices...
 			int[] p = convertIndexToPosition(i + 1);
 			r.setPosition(p[0], p[1], p[2]);
-			if (r != null) roiList.add(r);
+			roiList.add(r);
 		}
 		return (Roi[]) roiList.toArray(new Roi[roiList.size()]);
 	}
@@ -688,6 +693,7 @@ public class Virtual5DStack {
 
 		public void setRoi(String setName, Roi r) {
 			if (!roiSetNames.contains(setName)) roiSetNames.add(setName);
+			if (!r.getName().equals(file.getName())) IJ.log("Warning: Mismatch in ROI name (" + r.getName() + ") and image filename (" + file.getName() + ")");
 			roi.put(setName, r);
 		}
 

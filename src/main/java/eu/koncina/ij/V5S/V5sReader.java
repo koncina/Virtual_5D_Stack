@@ -2,13 +2,17 @@ package eu.koncina.ij.V5S;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
+import java.util.zip.DataFormatException;
+import java.util.zip.Inflater;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -146,7 +150,24 @@ public class V5sReader {
 				Node roiNode = roiList.item(j);
 				if (roiNode.getNodeType() != Node.ELEMENT_NODE) continue;
 				Element roiElement = (Element) roiNode;
-				Roi r = RoiDecoder.openFromByteArray(Virtual5DStack.hexToBytes(roiElement.getTextContent()));
+				byte[] b64Roi = roiElement.getTextContent().getBytes();
+				byte[] roiBytes = Base64.getDecoder().decode(b64Roi);
+				ByteArrayOutputStream outputStream = new ByteArrayOutputStream(roiBytes.length);  
+				try {
+					Inflater inflater = new Inflater();   
+					inflater.setInput(roiBytes);  
+					byte[] buffer = new byte[1024];
+					while (!inflater.finished()) {
+						int count = inflater.inflate(buffer);  
+						outputStream.write(buffer, 0, count);
+					}
+					outputStream.close();
+				} catch (IOException | DataFormatException e) {
+					IJ.log("Error: Could not read ROI data");
+					continue;
+				}
+				roiBytes = outputStream.toByteArray();  
+				Roi r = RoiDecoder.openFromByteArray(roiBytes);	
 				v5s.setRoi(r.getCPosition(), r.getZPosition(), r.getTPosition(), r, name);
 			}			
 		}
