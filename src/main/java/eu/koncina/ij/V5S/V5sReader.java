@@ -31,6 +31,7 @@ public class V5sReader {
 		int width, height, channels, slices, frames, bpp;
 		String relPath;
 		String[] channelNames;
+		String[] channelDescriptions;
 
 		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
 		DocumentBuilder dBuilder;
@@ -75,13 +76,16 @@ public class V5sReader {
 			channels = cList.getLength();
 
 			channelNames = new String[channels];
+			channelDescriptions = new String[channels];
 
 			for (int i = 0; i < channels; i++) {
 				Element cElement = (Element) cList.item(i);
 				int cIndex = Integer.parseInt(cElement.getElementsByTagName("id").item(0).getTextContent());
 				if (cIndex < 1 || cIndex - 1 > channels) IJ.error("channel index is out of range");
 				String cName = cElement.getElementsByTagName("name").item(0).getTextContent();
+				String cDescription = cElement.getElementsByTagName("description").item(0).getTextContent();
 				channelNames[cIndex - 1] = cName;
+				channelDescriptions[cIndex - 1] = cDescription;
 			}
 
 		} catch (Exception e) {
@@ -91,7 +95,7 @@ public class V5sReader {
 
 
 		Virtual5DStack v5s = new Virtual5DStack(width, height, channels, slices, frames, bpp);
-		v5s.setChannelNames(channelNames);
+		v5s.setChannelNames(channelNames, channelDescriptions);
 
 		//NodeList imageList = doc.getElementsByTagName("image");
 		Element imagesElement = (Element) doc.getElementsByTagName("images").item(0);

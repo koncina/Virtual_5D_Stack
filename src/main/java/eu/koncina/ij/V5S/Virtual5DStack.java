@@ -553,6 +553,13 @@ public class Virtual5DStack {
 		if (cNames.length != dimension[2]) throw new IllegalArgumentException("Invalid number of channels");
 		channelNames = cNames;
 	}
+	
+	public void setChannelNames(String[] cNames, String[] cDescriptions) {
+		if (cNames.length != dimension[2]) throw new IllegalArgumentException("Invalid number of channels");
+		if (cNames.length != cDescriptions.length) throw new IllegalArgumentException("cNames and cDescriptions must be equally sized");
+		channelNames = cNames;
+		channelDescriptions = cDescriptions;
+	}
 
 	public void setChannelState(int channel, boolean state) {
 		channelStates[channel] = state;
