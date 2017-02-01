@@ -94,7 +94,7 @@ public class V5sReader {
 		}
 
 
-		Virtual5DStack v5s = new Virtual5DStack(width, height, channels, slices, frames, bpp);
+		Virtual5DStack v5s = new Virtual5DStack(width, height, channels, slices, frames, bpp, f);
 		v5s.setChannelNames(channelNames, channelDescriptions);
 
 		//NodeList imageList = doc.getElementsByTagName("image");
@@ -176,7 +176,7 @@ public class V5sReader {
 			}			
 		}
 
-		v5s.setName(f.getName().replace(".v5s", ""));
+		//v5s.setName(f.getName().replace(".v5s", ""));
 		return v5s;	
 	}
 
@@ -245,7 +245,7 @@ public class V5sReader {
 
 		if (fileList.size() != nSlices * nFrames) throw new IllegalStateException("fileList.size() != nSlices * nFrames");
 
-		Virtual5DStack v5s = new Virtual5DStack(dimMax[0], dimMax[1], dimMax[2], nSlices, nFrames);
+		Virtual5DStack v5s = new Virtual5DStack(dimMax[0], dimMax[1], dimMax[2], nSlices, nFrames, txtFile);
 
 		for (int i = 0; i < fileList.size(); i++) {
 			for (int j = 0; j < dim[2]; j++) {
@@ -253,7 +253,7 @@ public class V5sReader {
 			}
 		}
 
-		v5s.setName(txtFile.getName().replace(".v5s", ""));
+		//v5s.setName(txtFile.getName().replace(".v5s", ""));
 		return v5s;
 	}
 

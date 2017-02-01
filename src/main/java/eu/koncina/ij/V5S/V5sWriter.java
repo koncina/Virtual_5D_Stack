@@ -6,6 +6,7 @@ import org.w3c.dom.Element;
 import ij.IJ;
 import ij.gui.Roi;
 import ij.io.RoiEncoder;
+import ij.io.SaveDialog;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -59,6 +60,29 @@ public class V5sWriter {
 			sb.append(cParts[j]);
 		}
 		return sb.toString();
+	}
+	
+	public void v5sSaveDialog(Virtual5DStack v5s) {
+		
+		String folderName;
+		
+		if (v5s.getFile() == null) {
+			folderName = v5s.getFolder().toString();
+		} else {
+			folderName = v5s.getFile().getParentFile().getPath();
+		}
+		
+		SaveDialog sd = new SaveDialog("Save V5S", folderName, v5s.getName(), ".v5s");
+		if (sd.getDirectory() == null)
+			return;
+
+		try {
+			File f = new File(sd.getDirectory(), sd.getFileName());
+			writeXml(v5s, f);
+			v5s.setFile(f);
+		} catch (Exception e) {
+			IJ.error("Could not generate v5s file...");
+		}
 	}
 
 	public void writeXml(Virtual5DStack v5s, File xml) throws ParserConfigurationException {

@@ -32,7 +32,7 @@ public class Virtual5DStack {
 	// Arrays with a size of nSlices	
 	private V5sElement[] elements;
 
-	private String name;
+	private File file = null;
 
 	private int[] dimension;
 	private int nElements;
@@ -48,30 +48,30 @@ public class Virtual5DStack {
 	public Virtual5DStack() {
 	}
 
-	public Virtual5DStack(int width, int height, int nChannels, int nSlices, int nFrames, int bpp, String name) {
+	public Virtual5DStack(int width, int height, int nChannels, int nSlices, int nFrames, int bpp) {
 		dimension = new int[] {width, height, nChannels, nSlices, nFrames, bpp};
 		nElements = nChannels * nSlices * nFrames;
 		elements = new V5sElement[nElements];
 		channelNames = new String[nChannels];
 		channelDescriptions = new String[nChannels];
 		channelStates = new boolean[nChannels];
-		this.name = name;
 		for (int c = 0; c < nChannels; c++) {
 			setChannelName(c, "channel " + (c + 1), "");
 			setChannelState(c, true);
 		}
 	}
-
-	public Virtual5DStack(int width, int height, int nChannels, int nSlices, int nFrames, String name) {
-		this(width, height, nChannels, nSlices, nFrames, 16, name);
+	
+	public Virtual5DStack(int width, int height, int nChannels, int nSlices, int nFrames, int bpp, File file) {
+		this(width, height, nChannels, nSlices, nFrames, bpp);
+		this.file = file;
+	}
+	
+	public Virtual5DStack(int width, int height, int nChannels, int nSlices, int nFrames, File file) {
+		this(width, height, nChannels, nSlices, nFrames, 16, file);
 	}
 
 	public Virtual5DStack(int width, int height, int nChannels, int nSlices, int nFrames) {
-		this(width, height, nChannels, nSlices, nFrames, 16, "New");
-	}
-
-	public Virtual5DStack(int width, int height, int nChannels, int nSlices, int nFrames, int bpp) {
-		this(width, height, nChannels, nSlices, nFrames, bpp, "New");
+		this(width, height, nChannels, nSlices, nFrames, 16);
 	}
 
 	/** Returns that stack index (one-based) corresponding to the specified position.
@@ -124,9 +124,14 @@ public class Virtual5DStack {
 		}
 		return guessedName;
 	}
-
+	
 	public String getName() {
-		return name;
+		if (file == null) return guessName() + ".v5s";
+		else return file.getName();
+	}
+	
+	public File getFile() {
+		return file;
 	}
 
 	public File getFolder() {
@@ -359,8 +364,8 @@ public class Virtual5DStack {
 		}
 	}
 
-	public void setName(String name) {
-		this.name = name;
+	public void setFile(File file) {
+		this.file = file;
 	}
 
 	public void setElementsC(V5sElement[] subElements, int slice, int frame) {
@@ -612,7 +617,7 @@ public class Virtual5DStack {
 		imp.setDimensions(dimension[2], dimension[3], dimension[4]);
 		imp = new CompositeImage(imp, IJ.COMPOSITE);
 		imp.setOpenAsHyperStack(true);
-		imp.setTitle(name);
+		imp.setTitle(getName());
 		imp.setProperty("v5s", this);
 		IJ.showStatus("");
 		IJ.showProgress(2);

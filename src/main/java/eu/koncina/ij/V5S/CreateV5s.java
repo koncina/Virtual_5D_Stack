@@ -207,7 +207,6 @@ public class CreateV5s extends PlugInFrame {
 				}		
 			}
 		}
-		v5s.setName(v5s.guessName());
 		v5s.changes = true;
 		return v5s;
 	}

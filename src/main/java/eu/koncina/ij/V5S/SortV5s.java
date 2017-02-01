@@ -5,11 +5,9 @@ import ij.plugin.filter.PlugInFilter;
 import ij.process.*;
 import ij.plugin.CanvasResizer;
 import ij.gui.*;
-import ij.io.SaveDialog;
 
 import java.awt.*;
 import java.awt.event.*;
-import java.io.File;
 import java.util.*;
 
 import javax.swing.JOptionPane;
@@ -285,13 +283,9 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 			this.imp.show();
 			this.imp.updateAndRepaintWindow();
 			if (v5s.changes) {
-				SaveDialog sd = new SaveDialog("Save V5S", v5s.getFolder().toString(), v5s.getName(), ".v5s");
-				V5sWriter v5sw  = new V5sWriter();
-				try {
-					v5sw.writeXml(v5s, new File(sd.getDirectory(), sd.getFileName()));
-				} catch (Exception e) {
-					IJ.log("Did not save v5s file...");
-				}
+				V5sWriter v5sW  = new V5sWriter();
+				v5sW.v5sSaveDialog(v5s);
+				this.imp.setTitle(v5s.getName());
 			}
 		}
 	}
