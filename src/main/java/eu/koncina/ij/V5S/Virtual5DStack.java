@@ -574,6 +574,13 @@ public class Virtual5DStack {
 		int n = getStackIndex(channel, slice, frame);
 		elements[n - 1].setRoi(setName, r);
 	}
+	
+	public void rmRoiSet(String setName) {
+		for (int i = 0; i < elements.length; i++) {
+			if (elements[i] == null) continue;
+			elements[i].rmRoi(setName);
+		}
+	}
 
 	public ImagePlus load() throws FormatException, IOException {
 		if (nElements == 0) throw new FormatException();

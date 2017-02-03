@@ -4,6 +4,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
 import ij.IJ;
+import ij.gui.EllipseRoi;
 import ij.gui.Roi;
 import ij.io.RoiEncoder;
 import ij.io.SaveDialog;
@@ -12,6 +13,8 @@ import ij.process.FloatPolygon;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 import java.util.Arrays;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -24,6 +27,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import java.awt.Polygon;
 import java.awt.Rectangle;
 import java.io.*;
 import java.util.*;
@@ -192,69 +196,88 @@ public class V5sWriter {
 
 		// To reduce the size of Xml files, the ROIs are compressed using zlib and stored as base64 strings
 		// Zlib method from https://dzone.com/articles/how-compress-and-uncompress
-
+		byte[] byteData;
 		String[] roiSetNames = v5s.getRoiSetNames();
 		for (int i = 0; i < roiSetNames.length; i++) {
 			Element rois = doc.createElement("roiset");
 			rois.setAttribute("name", roiSetNames[i]);
 			for (Roi r : v5s.getRoiSet(roiSetNames[i])) {
+				int rC = r.getCPosition();
+				int rZ = r.getZPosition();
+				int rT = r.getTPosition();
 				Element roi = doc.createElement("roi");
+				roi.setAttribute("posC", Integer.toString(rC));
+				roi.setAttribute("posZ", Integer.toString(rZ));
+				roi.setAttribute("posT", Integer.toString(rT));
+				roi.setAttribute("name", r.getName());
+				roi.setAttribute("type", Integer.toString(r.getType()));
 				switch (r.getType()) {
 				case Roi.RECTANGLE:
-					roi.setAttribute("type", Integer.toString(Roi.RECTANGLE));
-					
 					Element rRectX = doc.createElement("x");
 					Element rRectY = doc.createElement("y");
 					Element rRectW = doc.createElement("width");
 					Element rRectH = doc.createElement("height");
-					
-				
 					Rectangle rRect = r.getBounds();
 					rRectX.appendChild(doc.createTextNode(Double.toString(rRect.getX())));
 					rRectY.appendChild(doc.createTextNode(Double.toString(rRect.getY())));
 					rRectW.appendChild(doc.createTextNode(Double.toString(rRect.getWidth())));
 					rRectH.appendChild(doc.createTextNode(Double.toString(rRect.getHeight())));
-					
 					roi.appendChild(rRectX);
 					roi.appendChild(rRectY);
 					roi.appendChild(rRectW);
 					roi.appendChild(rRectH);
-					
+					break;
+				case Roi.POLYGON:
+					Polygon rPolygon = r.getPolygon();
+					byteData = IntArray2ByteArray(rPolygon.xpoints, rPolygon.ypoints);
+					roi.setTextContent(new String(CompressedBase64(byteData)));
 					break;
 				case Roi.FREEROI:
-					roi.setAttribute("type", Integer.toString(Roi.FREEROI));
-					FloatPolygon rPol = r.getFloatPolygon();	
-					for (int j = 0; j < rPol.npoints; j++) {
-						Element rPointX = doc.createElement("x");
-						Element rPointY = doc.createElement("y");
-						rPointX.setTextContent(Float.toString(rPol.xpoints[j]));
-						rPointY.setTextContent(Float.toString(rPol.ypoints[j]));
-						Element rPoint = doc.createElement("point");
-						rPoint.appendChild(rPointX);
-						rPoint.appendChild(rPointY);
-						roi.appendChild(rPoint);
+					if (r instanceof EllipseRoi) {
+						roi.setAttribute("subtype", "EllipseRoi");
+						EllipseRoi r2 = (EllipseRoi) r;
+						double[] rParams = r2.getParams();
+						Element rPointX1 = doc.createElement("x1");
+						Element rPointY1 = doc.createElement("y1");
+						Element rPointX2 = doc.createElement("x2");
+						Element rPointY2 = doc.createElement("y2");
+						Element rAspect = doc.createElement("aspectRatio");
+						rPointX1.setTextContent(Double.toString(rParams[0]));
+						rPointY1.setTextContent(Double.toString(rParams[1]));
+						rPointX2.setTextContent(Double.toString(rParams[2]));
+						rPointY2.setTextContent(Double.toString(rParams[3]));
+						rAspect.setTextContent(Double.toString(rParams[4]));
+						roi.appendChild(rPointX1);
+						roi.appendChild(rPointY1);
+						roi.appendChild(rPointX2);
+						roi.appendChild(rPointY2);
+						roi.appendChild(rAspect);
+					} else {
+						roi.setAttribute("subtype", "BinaryPolygon");
+						FloatPolygon rPol = r.getFloatPolygon();
+						boolean compress = false;
+						if (rPol.npoints > 20) compress = true;
+						if (compress) {
+							byteData = FloatArray2ByteArray(rPol.xpoints, rPol.xpoints);
+							roi.setTextContent(new String(CompressedBase64(byteData)));
+						} else {
+							for (int j = 0; j < rPol.npoints; j++) {
+								Element rPoint = doc.createElement("point");
+								Element rPointX = doc.createElement("x");
+								Element rPointY = doc.createElement("y");
+								rPointX.setTextContent(Float.toString(rPol.xpoints[j]));
+								rPointY.setTextContent(Float.toString(rPol.ypoints[j]));
+								rPoint.appendChild(rPointX);
+								rPoint.appendChild(rPointY);
+								roi.appendChild(rPoint);
+							}
+						}
 					}
 					break;
 				default:
 					roi.setAttribute("type", "binary");
-					// Should get useless...
-					byte[] byteData = RoiEncoder.saveAsByteArray(r);
-					Deflater deflater = new Deflater();
-					deflater.setInput(byteData);
-					ByteArrayOutputStream outputStream = new ByteArrayOutputStream(byteData.length);
-					deflater.finish();
-					byte[] buffer = new byte[1024];   
-					while (!deflater.finished()) {
-						int count = deflater.deflate(buffer);
-						outputStream.write(buffer, 0, count);   
-					}
-					try {
-						outputStream.close();
-					} catch (IOException e) {
-						IJ.error("Could not compress ROI...");
-					}  
-					byte[] b64Roi = Base64.getEncoder().encode(outputStream.toByteArray());
-					roi.appendChild(doc.createTextNode(new String(b64Roi)));
+					byteData = RoiEncoder.saveAsByteArray(r);
+					roi.appendChild(doc.createTextNode(new String(CompressedBase64(byteData))));
 					break;
 				}
 				rois.appendChild(roi);
@@ -280,4 +303,52 @@ public class V5sWriter {
 			System.out.println(ioe.getMessage());
 		}
 	}
+
+	private static byte[] CompressedBase64(byte[] byteData) {
+		Deflater deflater = new Deflater();
+		deflater.setInput(byteData);
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream(byteData.length);
+		deflater.finish();
+		byte[] buffer = new byte[1024];
+		while (!deflater.finished()) {
+			int count = deflater.deflate(buffer);
+			outputStream.write(buffer, 0, count);   
+		}
+		try {
+			outputStream.close();
+		} catch (IOException e) {
+			IJ.error("Could not compress ROI...");
+		}
+		return Base64.getEncoder().encode(outputStream.toByteArray());
+	}
+
+
+	// Adapted from http://stackoverflow.com/a/20698700
+	private static byte[] FloatArray2ByteArray(float[]... floatArrays) {
+		int length = 0;
+		for (float[] floatArray : floatArrays) {
+			length += floatArray.length;
+		}
+		ByteBuffer buffer = ByteBuffer.allocate(4 * length);
+		for (float[] floatArray : floatArrays) {
+			for (float value : floatArray){
+				buffer.putFloat(value);
+			}
+		}
+		return buffer.array();
+	}
+
+	private static byte[] IntArray2ByteArray(int[]... intArrays){
+		int length = 0;
+		for (int[] intArray : intArrays) {
+			length += intArray.length;
+		}
+		ByteBuffer buffer = ByteBuffer.allocate(4 * length);
+		IntBuffer intBuffer = buffer.asIntBuffer();
+		for (int[] intArray : intArrays) {
+			intBuffer.put(intArray);
+		}
+		return buffer.array();
+	}
+
 }
