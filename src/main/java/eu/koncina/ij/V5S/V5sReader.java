@@ -156,8 +156,13 @@ public class V5sReader {
 				Node roiNode = roiList.item(j);
 				if (roiNode.getNodeType() != Node.ELEMENT_NODE) continue;
 				RoiReader rr = new RoiReader((Element) roiNode);
-				Roi r = rr.getRoi();
-				v5s.setRoi(r.getCPosition(), r.getZPosition(), r.getTPosition(), r, name);
+				try {
+					Roi r = rr.getRoi();
+					v5s.setRoi(r.getCPosition(), r.getZPosition(), r.getTPosition(), r, name);
+				} catch (Exception e) {
+					IJ.log("Error: could not load ROI #" + (i + 1) + " in set " + name);
+					continue;
+				}
 			}			
 		}
 		IJ.showStatus("");

@@ -36,7 +36,7 @@ public class RoiToV5s extends ImagePlus implements PlugIn {
 				IJ.log("Warning: Did not store ROI for empty file at position c=" + cPos + " z=" + zPos + " t=" + tPos);
 				continue;
 			}
-			r.setName(file.getName());
+			
 			v5s.setRoi(cPos, zPos, tPos, r, name);
 		}
 

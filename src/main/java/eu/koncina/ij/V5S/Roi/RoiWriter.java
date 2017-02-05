@@ -18,30 +18,27 @@ import org.w3c.dom.Element;
 import ij.IJ;
 import ij.gui.EllipseRoi;
 import ij.gui.Line;
-import ij.gui.OvalRoi;
 import ij.gui.Roi;
 import ij.io.RoiEncoder;
 import ij.process.FloatPolygon;
 
 public class RoiWriter {
-	public static int EllipseRoi = 0, BinaryFloatPolygon = 1, FloatPolygon = 2;
 	
 	private Document doc;
 
 	public RoiWriter(Document doc) {
 		this.doc = doc;
 	}
-	
 
-	
 	public Element getElement(Roi roi) throws ParserConfigurationException, DOMException, IOException {
-		
+
 		int rC = roi.getCPosition();
 		int rZ = roi.getZPosition();
 		int rT = roi.getTPosition();
-		
+
 		RoiElement roiElement = new RoiElement(roi.getType(), roi.getName(), rC, rZ, rT);
 		byte[] byteData;
+		boolean compress;
 
 		switch (roi.getType()) {
 		case Roi.RECTANGLE: case Roi.OVAL:
@@ -53,13 +50,22 @@ public class RoiWriter {
 			break;
 		case Roi.POLYGON: case Roi.POLYLINE: case Roi.FREELINE: case Roi.ANGLE: case Roi.POINT:
 			Polygon rPolygon = roi.getPolygon();
-			roiElement.setValue(rPolygon.xpoints, rPolygon.ypoints);
+			compress = false;
+			if (rPolygon.npoints > 20) compress = true;
+			if (compress) {
+				roiElement.setSubtype("BinaryPolygon");
+				roiElement.setValue(rPolygon.xpoints, rPolygon.ypoints);
+			} else {
+				for (int i = 0; i < rPolygon.npoints; i++) {
+					roiElement.addPoint(rPolygon.xpoints[i], rPolygon.ypoints[i]);
+				}
+			}
 			break;
 		case Roi.FREEROI:
 			if (roi instanceof EllipseRoi) {
 				EllipseRoi r2 = (EllipseRoi) roi;
 				double[] rParams = r2.getParams();
-				roiElement.setSubtype(EllipseRoi);				
+				roiElement.setSubtype("Ellipse");				
 				roiElement.addValue("x1", rParams[0]);
 				roiElement.addValue("y1", rParams[1]);
 				roiElement.addValue("x2", rParams[2]);
@@ -67,13 +73,13 @@ public class RoiWriter {
 				roiElement.addValue("aspectRatio", rParams[4]);
 			} else {
 				FloatPolygon rPol = roi.getFloatPolygon();
-				boolean compress = false;
+				compress = false;
 				if (rPol.npoints > 20) compress = true;
 				if (compress) {
-					roiElement.setSubtype(BinaryFloatPolygon);
+					roiElement.setSubtype("BinaryFloatPolygon");
 					roiElement.setValue(rPol.xpoints, rPol.ypoints);
 				} else {
-					roiElement.setSubtype(FloatPolygon);
+					roiElement.setSubtype("FloatPolygon");
 					for (int j = 0; j < rPol.npoints; j++) {
 						roiElement.addPoint(rPol.xpoints[j], rPol.ypoints[j]);
 					}
@@ -101,72 +107,65 @@ public class RoiWriter {
 		return roiElement.getElement();
 
 	}
-	
+
 	private class RoiElement {
 		Element element;
 		RoiElement(int type, String name, int channel, int slice, int frame) {
 			Element element = doc.createElement("roi");
-			element.setAttribute("type", Integer.toString(type));
+			element.setAttribute("type", RoiReader.typeString[type]);
 			element.setAttribute("name", name);
 			element.setAttribute("posC", Integer.toString(channel));
 			element.setAttribute("posZ", Integer.toString(slice));
 			element.setAttribute("posT", Integer.toString(frame));
 			this.element = element;
 		}
-		
-		public void addValues(String[] s, double[] v) {
-			if (s.length != v.length) throw new IllegalArgumentException();
-			for (int i = 0; i < s.length; i++) {
-				addValue(s[i], v[i]);
-			}
-		}
-		
+
 		public void addValue(String s, double v) {
-			element.appendChild(makeValue(s, v));
+			element.appendChild(createValueElement(s, v));
 		}
-		
-		public Element makeValue(String s, double v) {
+
+		public Element createValueElement(String s, double v) {
 			Element e = doc.createElement(s);
 			e.appendChild(doc.createTextNode(Double.toString(v)));
 			return e;
 		}
-		
+
 		public void addPoint(float x, float y) {
 			Element point = doc.createElement("point");
-			Element pX = makeValue("x", x);
-			Element pY = makeValue("y", y);
+			Element pX = createValueElement("x", x);
+			Element pY = createValueElement("y", y);
 			point.appendChild(pX);
 			point.appendChild(pY);
 			element.appendChild(point);
 		}
-		
+
 		public void setValue(String s) {
 			element.setTextContent(s);
 		}
-		
+
 		public void setValue(byte[] b) throws IOException {
 			setValue(new String(compressB64(b)));
 		}
-		
+
 		public void setValue(int[]... intArrays) throws IOException {
 			byte[] byteData = intArray2ByteArray(intArrays);
 			setValue(byteData);
 		}
-		
+
 		public void setValue(float[]... floatArrays) throws IOException {
 			byte[] byteData = floatArray2ByteArray(floatArrays);
 			setValue(byteData);
 		}
-		
-		public void setSubtype(int subtype) {
-			element.setAttribute("subtype", Integer.toString(subtype));
+
+		public void setSubtype(String subtype) {
+			element.setAttribute("subtype", subtype);
 		}
-		
+
 		public Element getElement() {
 			return element;
 		}	
 	}
-	
+
 	private static byte[] compressB64(byte[] byteData) throws IOException {
 		Deflater deflater = new Deflater();
 		deflater.setInput(byteData);
@@ -195,7 +194,7 @@ public class RoiWriter {
 		}
 		return buffer.array();
 	}
-	
+
 	private static byte[] intArray2ByteArray(int[]... intArrays){
 		int length = 0;
 		for (int[] intArray : intArrays) {
@@ -208,6 +207,4 @@ public class RoiWriter {
 		}
 		return buffer.array();
 	}
-	
-
 }
