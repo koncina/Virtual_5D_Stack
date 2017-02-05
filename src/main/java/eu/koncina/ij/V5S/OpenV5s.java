@@ -1,6 +1,8 @@
 package eu.koncina.ij.V5S;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.zip.DataFormatException;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -32,7 +34,12 @@ public class OpenV5s extends ImagePlus  implements PlugIn {
 		
 		// Hiding messages as non Xml files (old format) will generate some output
 		hideMsg.start();
-		v5s = v5sr.loadFromXml(f);
+		try {
+			v5s = v5sr.loadFromXml(f);
+		} catch (DataFormatException | IOException e1) {
+			IJ.error("Could not load XML v5s");
+			return;
+		}
 		hideMsg.stop();
 
 		// Trying to load from the old text format

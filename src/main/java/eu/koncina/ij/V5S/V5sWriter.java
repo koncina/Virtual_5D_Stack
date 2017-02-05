@@ -1,11 +1,12 @@
 package eu.koncina.ij.V5S;
 
+import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
+import eu.koncina.ij.V5S.Roi.RoiWriter;
 import ij.IJ;
 import ij.gui.Roi;
-import ij.io.RoiEncoder;
 import ij.io.SaveDialog;
 
 import java.io.File;
@@ -22,10 +23,6 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-
-import java.io.*;
-import java.util.*;
-import java.util.zip.*;
 
 public class V5sWriter {
 
@@ -61,17 +58,17 @@ public class V5sWriter {
 		}
 		return sb.toString();
 	}
-	
+
 	public void v5sSaveDialog(Virtual5DStack v5s) {
-		
+
 		String folderName;
-		
+
 		if (v5s.getFile() == null) {
 			folderName = v5s.getFolder().toString();
 		} else {
 			folderName = v5s.getFile().getParentFile().getPath();
 		}
-		
+
 		SaveDialog sd = new SaveDialog("Save V5S", folderName, v5s.getName(), ".v5s");
 		if (sd.getDirectory() == null)
 			return;
@@ -85,7 +82,7 @@ public class V5sWriter {
 		}
 	}
 
-	public void writeXml(Virtual5DStack v5s, File xml) throws ParserConfigurationException {
+	public void writeXml(Virtual5DStack v5s, File xml) throws ParserConfigurationException, DOMException, IOException {
 		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
 		DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
 		Document doc = dBuilder.newDocument();
@@ -190,32 +187,13 @@ public class V5sWriter {
 
 		// To reduce the size of Xml files, the ROIs are compressed using zlib and stored as base64 strings
 		// Zlib method from https://dzone.com/articles/how-compress-and-uncompress
-
 		String[] roiSetNames = v5s.getRoiSetNames();
+		RoiWriter rw = new RoiWriter(doc);
 		for (int i = 0; i < roiSetNames.length; i++) {
 			Element rois = doc.createElement("roiset");
 			rois.setAttribute("name", roiSetNames[i]);
 			for (Roi r : v5s.getRoiSet(roiSetNames[i])) {
-				Element roi = doc.createElement("roi");
-				byte[] byteData = RoiEncoder.saveAsByteArray(r);
-				Deflater deflater = new Deflater();
-				deflater.setInput(byteData);
-				ByteArrayOutputStream outputStream = new ByteArrayOutputStream(byteData.length);
-				deflater.finish();
-				byte[] buffer = new byte[1024];   
-				while (!deflater.finished()) {
-					int count = deflater.deflate(buffer);
-					outputStream.write(buffer, 0, count);   
-				}
-				try {
-					outputStream.close();
-				} catch (IOException e) {
-					IJ.error("Could not compress ROI...");
-				}  
-				byte[] b64Roi = Base64.getEncoder().encode(outputStream.toByteArray());
-				roi.appendChild(doc.createTextNode(new String(b64Roi)));
-
-				rois.appendChild(roi);
+				rois.appendChild(rw.getElement(r));
 			}
 			root.appendChild(rois);
 		}
