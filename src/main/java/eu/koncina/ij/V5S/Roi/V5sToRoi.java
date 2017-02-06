@@ -1,5 +1,6 @@
-package eu.koncina.ij.V5S;
+package eu.koncina.ij.V5S.Roi;
 
+import eu.koncina.ij.V5S.Virtual5DStack;
 import ij.ImagePlus;
 import ij.WindowManager;
 import ij.gui.GenericDialog;

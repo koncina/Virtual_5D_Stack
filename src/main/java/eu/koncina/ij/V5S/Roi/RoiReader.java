@@ -1,9 +1,7 @@
 package eu.koncina.ij.V5S.Roi;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Base64;
-import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
 import org.w3c.dom.Element;

@@ -86,6 +86,7 @@ public class V5sWriter {
 		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
 		DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
 		Document doc = dBuilder.newDocument();
+		//doc.setXmlStandalone(true);
 		Element root = doc.createElement("v5s");
 		doc.appendChild(root);
 		// info elements
@@ -203,10 +204,10 @@ public class V5sWriter {
 			tr.setOutputProperty(OutputKeys.INDENT, "yes");
 			tr.setOutputProperty(OutputKeys.METHOD, "xml");
 			tr.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
-			//tr.setOutputProperty(OutputKeys.DOCTYPE_SYSTEM, "roles.dtd");
 			tr.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
-
+			
 			// send DOM to file
+
 			tr.transform(new DOMSource(doc), 
 					new StreamResult(new FileOutputStream(xml.getAbsolutePath())));
 			v5s.changes = false;

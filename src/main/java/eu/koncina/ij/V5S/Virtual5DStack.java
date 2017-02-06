@@ -247,6 +247,11 @@ public class Virtual5DStack {
 	public String[] getRoiSetNames() {
 		return (String[]) roiSetNames.toArray(new String[roiSetNames.size()]);
 	}
+	
+	public boolean hasRoiSetName(String setName) {
+		if (roiSetNames.contains(setName)) return true;
+		return false;
+	}
 
 	public Roi[] getRoiSet(String setName) {
 		ArrayList<Roi> roiList = new ArrayList<Roi>();
@@ -712,7 +717,7 @@ public class Virtual5DStack {
 
 		public void setRoi(String setName, Roi r) {
 			if (!roiSetNames.contains(setName)) roiSetNames.add(setName);
-			if (!r.getName().equals(file.getName())) IJ.log("Warning: Mismatch in ROI name (" + r.getName() + ") and image filename (" + file.getName() + ")");
+			//if (!r.getName().equals(file.getName())) IJ.log("Warning: Mismatch in ROI name (" + r.getName() + ") and image filename (" + file.getName() + ")");
 			roi.put(setName, r);
 		}
 

@@ -130,7 +130,6 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 	}
 
 	public void swapCells(int p1, int p2, int frame) {
-		//double mag = montage.getWindow().getCanvas().getMagnification();
 		int cellWidth = montage.getWidth() / gridX;
 		int nC = montage.getNChannels();
 
@@ -240,7 +239,7 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 		this.sourceCellThumb = tmp.getProcessor().resize((int) Math.floor(0.75 * this.montage.getWidth() / gridX));
 	}
 
-	public void mouseReleased(MouseEvent e) {	
+	public void mouseReleased(MouseEvent e) {
 		if (!active) return;
 		montage.getCanvas().setCursor(defaultCursor);
 		montage.killRoi();

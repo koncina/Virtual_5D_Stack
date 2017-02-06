@@ -91,11 +91,9 @@ public class V5sReader {
 			return null;
 		}
 
-
 		Virtual5DStack v5s = new Virtual5DStack(width, height, channels, slices, frames, bpp, f);
 		v5s.setChannelNames(channelNames, channelDescriptions);
 
-		//NodeList imageList = doc.getElementsByTagName("image");
 		Element imagesElement = (Element) doc.getElementsByTagName("images").item(0);
 		NodeList imageList = imagesElement.getElementsByTagName("image");
 		IJ.showStatus("Reading v5s images...");
