@@ -51,10 +51,13 @@ public class OpenV5s extends ImagePlus  implements PlugIn {
 		}
 		
 		String[] channelNames = v5s.getChannelNames();
-		
 		for (int i = 0; i < channelNames.length; i ++) {
 			gd.addCheckbox( (i + 1) + " - " + channelNames[i], true);
 		}
+
+		gd.addMessage(""); // I don't know how to add a separator and checkbox groups are not rendered as I would expect
+						   // when adding a "classical" (ungrouped) checkbox like below...
+		gd.addCheckbox( "Check SHA1 checksum", true);
 
 		gd.showDialog();
 		if (gd.wasCanceled())
@@ -65,7 +68,7 @@ public class OpenV5s extends ImagePlus  implements PlugIn {
 		}
 
 		try {
-			v5s.load().show();
+			v5s.load(gd.getNextBoolean()).show();
 		} catch (Exception e) {
 			IJ.error("Could not load V5S");
 			IJ.log(e.toString());

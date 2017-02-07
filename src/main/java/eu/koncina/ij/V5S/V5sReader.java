@@ -118,12 +118,6 @@ public class V5sReader {
 					return null;
 				}
 
-				if (sha1 != null) {
-					if (!Virtual5DStack.createSha1(imgFile).equals(sha1)) IJ.log("warning: sha1 checksum changed for " + imgFile.getName());
-				} else {
-					IJ.log("Warning: no sha1 checksum is stored in the v5s");
-				}
-
 				// Mapping channels
 				NodeList c_list = imageElement.getElementsByTagName("c");
 				for (int c = 0; c < c_list.getLength(); c++) {

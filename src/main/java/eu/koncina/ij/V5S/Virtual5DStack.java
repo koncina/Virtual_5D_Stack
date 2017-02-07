@@ -587,7 +587,7 @@ public class Virtual5DStack {
 		}
 	}
 
-	public ImagePlus load() throws FormatException, IOException {
+	public ImagePlus load(boolean checkSha1) throws FormatException, IOException {
 		if (nElements == 0) throw new FormatException();
 		IJ.showStatus("Loading the stack...");
 		ImageProcessorReader r = new ImageProcessorReader(new ChannelSeparator(LociPrefs.makeImageReader()));
@@ -597,9 +597,15 @@ public class Virtual5DStack {
 		for (int i = 0; i < nElements; i++) {
 			IJ.showProgress(i, nElements);
 			if (elements[i] != null) {
-				if (r.getCurrentFile() == null || !r.getCurrentFile().equals(elements[i].getFile().getPath())) {
+				File elementFile = elements[i].getFile();
+				if (r.getCurrentFile() == null || !r.getCurrentFile().equals(elementFile.getPath())) {
+					if (checkSha1 && elements[i].sha1 != null) {
+						if (!Virtual5DStack.createSha1(elementFile).equals(elements[i].sha1)) IJ.log("warning: sha1 checksum changed for " + elementFile.getName());
+					} else if (checkSha1 && elements[i].sha1 == null) {
+						IJ.log("Warning: no sha1 checksum is stored in the v5s");
+					}
 					hideMsg.start();
-					r.setId(elements[i].getFile().getPath());
+					r.setId(elementFile.getPath());
 					hideMsg.stop();
 				}
 				ImageProcessor ip = r.openProcessors(elements[i].getSourcePos()[0] - 1)[0];
@@ -629,13 +635,18 @@ public class Virtual5DStack {
 		imp.setDimensions(dimension[2], dimension[3], dimension[4]);
 		imp = new CompositeImage(imp, IJ.COMPOSITE);
 		imp.setOpenAsHyperStack(true);
+		imp.setDisplayRange(0, Math.pow(2, dimension[5]));
 		imp.setTitle(getName());
 		imp.setProperty("v5s", this);
 		IJ.showStatus("");
 		IJ.showProgress(2);
 
 		return imp;
-	}    
+	}
+	
+	public ImagePlus load() throws FormatException, IOException {
+		return load(true);
+	}
 
 	public class V5sElement {
 		private File file = null;
