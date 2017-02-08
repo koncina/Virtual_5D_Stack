@@ -243,6 +243,14 @@ public class Virtual5DStack {
 	public String[] getChannelDescriptions() {
 		return channelDescriptions;
 	}
+	
+	public int getActiveChannelsCount() {
+		int count = 0;
+		for (int i = 0; i < channelStates.length; i++) {
+			if (channelStates[i]) count++;
+		}
+		return count;
+	}
 
 	public String[] getRoiSetNames() {
 		return (String[]) roiSetNames.toArray(new String[roiSetNames.size()]);
@@ -305,6 +313,12 @@ public class Virtual5DStack {
 
 	public boolean isEmpty(int channel, int slice, int frame) {
 		if (elements[getStackIndex(channel, slice, frame) - 1] == null) return true;
+		return false;
+	}
+	
+	private boolean isActive(int n) {
+		int[] pos = convertIndexToPosition(n);
+		if (channelStates[pos[0] - 1]) return true;
 		return false;
 	}
 
@@ -487,6 +501,7 @@ public class Virtual5DStack {
 
 	public ImagePlus addSlice(int n, ImagePlus imp) {
 		addSlice(n);
+		int nC = imp.getNChannels();
 		ImageStack stack = imp.getImageStack();
 		short[] pixels = new short[dimension[0] * dimension[1]];
 		ImageProcessor emptyProcessor = new ShortProcessor(dimension[0], dimension[1], pixels, null);
@@ -496,13 +511,13 @@ public class Virtual5DStack {
 
 		for (int i = dimension[4]; i > 0; i--) {
 			int pos = imp.getStackIndex(1, n, i);
-			if (n == 0) pos = pos - dimension[2];
-			for (int j = 0; j < dimension[2]; j++) {
-				stack.addSlice("missing", emptyProcessor, pos + dimension[2] - 1);
+			if (n == 0) pos = pos - nC;
+			for (int j = 0; j < nC; j++) {
+				stack.addSlice("missing", emptyProcessor, pos + nC - 1);
 			}
 		}
 		imp.setStack(stack);
-		imp.setDimensions(dimension[2], dimension[3], dimension[4]);
+		imp.setDimensions(nC, dimension[3], dimension[4]);
 
 		if (imp.getZ() > n) imp.setPositionWithoutUpdate(imp.getC(), imp.getZ() + 1, imp.getT());
 		return imp;
@@ -590,12 +605,15 @@ public class Virtual5DStack {
 	public ImagePlus load(boolean checkSha1) throws FormatException, IOException {
 		if (nElements == 0) throw new FormatException();
 		IJ.showStatus("Loading the stack...");
+		int nChannels = getActiveChannelsCount();
 		ImageProcessorReader r = new ImageProcessorReader(new ChannelSeparator(LociPrefs.makeImageReader()));
 		CanvasResizer cr = new CanvasResizer();
-		ImageStack stack = new ImageStack(dimension[0], dimension[1], nElements);
+		ImageStack stack = new ImageStack(dimension[0], dimension[1], nChannels * dimension[3] * dimension[4]);
 		short[] pixels = new short[dimension[0] * dimension[1]];
+		int stackPosition = 1;
 		for (int i = 0; i < nElements; i++) {
 			IJ.showProgress(i, nElements);
+			if (!isActive(i + 1)) continue;
 			if (elements[i] != null) {
 				File elementFile = elements[i].getFile();
 				if (r.getCurrentFile() == null || !r.getCurrentFile().equals(elementFile.getPath())) {
@@ -618,21 +636,23 @@ public class Virtual5DStack {
 				if (elements[i].getFlipHorizontal()) ip.flipHorizontal();
 				if (elements[i].getFlipVertical()) ip.flipVertical();
 
-				stack.setProcessor(ip, i + 1);
-				stack.setSliceLabel(elements[i].getFile().getName(), i + 1);
-			} else {
+				stack.setProcessor(ip, stackPosition);
+				stack.setSliceLabel(elements[i].getFile().getName(), stackPosition);
+				stackPosition++;
+			} else {;
 				// Replacing empty slices with black images
 				ImageProcessor emptyProcessor = new ShortProcessor(dimension[0], dimension[1], pixels, null);
 				if (dimension[5] == 8) {
 					emptyProcessor = emptyProcessor.convertToByteProcessor();
 				}
-				stack.setProcessor(emptyProcessor, i + 1);
-				stack.setSliceLabel("missing", i + 1);
+				stack.setProcessor(emptyProcessor, stackPosition);
+				stack.setSliceLabel("missing", stackPosition);
+				stackPosition++;
 			}
 		}
 		r.close();
 		ImagePlus imp = new ImagePlus("", stack);
-		imp.setDimensions(dimension[2], dimension[3], dimension[4]);
+		imp.setDimensions(nChannels, dimension[3], dimension[4]);
 		imp = new CompositeImage(imp, IJ.COMPOSITE);
 		imp.setOpenAsHyperStack(true);
 		imp.setDisplayRange(0, Math.pow(2, dimension[5]));

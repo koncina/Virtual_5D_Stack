@@ -231,11 +231,12 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 		this.gridStart = getGridPosition(this.startX, this.startY);
 
 		this.sourceCell = extractCell(gridStart, montage);
-
 		ImagePlus tmp = new ImagePlus(null, this.sourceCell);
 		tmp = new CompositeImage(tmp, IJ.COMPOSITE);
-		StackConverter sc = new StackConverter(tmp);
-		sc.convertToRGB();
+		if (this.sourceCell.getSize() > 1) {
+			StackConverter sc = new StackConverter(tmp);
+			sc.convertToRGB();
+		}
 		this.sourceCellThumb = tmp.getProcessor().resize((int) Math.floor(0.75 * this.montage.getWidth() / gridX));
 	}
 
