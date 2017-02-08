@@ -1,7 +1,5 @@
 package eu.koncina.ij.V5S.Roi;
 
-import java.io.File;
-
 import ij.IJ;
 import ij.ImagePlus;
 import ij.WindowManager;
@@ -30,7 +28,6 @@ public class RoiToV5s extends ImagePlus implements PlugIn {
 		if (v5s.hasRoiSetName(name)) {
 			gd = new GenericDialog("Overwrite set name?");
 			gd.addMessage("A ROI set with the same name already exists, would you like to overwrite it?");
-			
 			gd.showDialog();
 			if (gd.wasCanceled()) return;
 		}
@@ -40,8 +37,7 @@ public class RoiToV5s extends ImagePlus implements PlugIn {
 			int cPos = r.getCPosition();
 			int zPos = r.getZPosition();
 			int tPos = r.getTPosition();
-			File file = v5s.getElementFile(cPos, zPos, tPos);
-			if (file == null) {
+			if (v5s.isEmpty(cPos, zPos, tPos)) {
 				IJ.log("Warning: Did not store ROI for empty file at position c=" + cPos + " z=" + zPos + " t=" + tPos);
 				continue;
 			}
