@@ -16,7 +16,7 @@ public class V5sToRoi extends ImagePlus implements PlugIn {
 		if (null == imp) return;
 		Virtual5DStack v5s = (Virtual5DStack) imp.getProperty("v5s");
 		if (v5s.getRoiSetNames().length == 0) return;
-		RoiManager rm = RoiManager.getInstance();
+		RoiManager rm = RoiManager.getInstance2();
 		if (rm == null) rm = new RoiManager();
 		
 		GenericDialog gd = new GenericDialog("Roi set name");
