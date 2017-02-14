@@ -637,7 +637,7 @@ public class Virtual5DStack {
 				if (elements[i].getFlipVertical()) ip.flipVertical();
 
 				stack.setProcessor(ip, stackPosition);
-				stack.setSliceLabel(elements[i].getFile().getName(), stackPosition);
+				stack.setSliceLabel(elements[i].getFile().getName() + "-" + getChannelName(i + 1), stackPosition);
 				stackPosition++;
 			} else {;
 				// Replacing empty slices with black images
@@ -656,7 +656,10 @@ public class Virtual5DStack {
 		imp = new CompositeImage(imp, IJ.COMPOSITE);
 		imp.setOpenAsHyperStack(true);
 		imp.setDisplayRange(0, Math.pow(2, dimension[5]));
-		imp.setTitle(getName());
+		String name = getName();
+		if (name.indexOf(".") > 0)
+			name = name.substring(0, name.lastIndexOf("."));
+		imp.setTitle(name);
 		imp.setProperty("v5s", this);
 		IJ.showStatus("");
 		IJ.showProgress(2);
@@ -664,6 +667,11 @@ public class Virtual5DStack {
 		return imp;
 	}
 	
+	private String getChannelName(int n) {
+		int[] pos = convertIndexToPosition(n);
+		return channelNames[pos[0] - 1];
+	}
+
 	public ImagePlus load() throws FormatException, IOException {
 		return load(true);
 	}
