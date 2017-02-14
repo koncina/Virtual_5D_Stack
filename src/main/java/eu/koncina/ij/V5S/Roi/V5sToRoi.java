@@ -1,6 +1,7 @@
 package eu.koncina.ij.V5S.Roi;
 
 import eu.koncina.ij.V5S.Virtual5DStack;
+import ij.IJ;
 import ij.ImagePlus;
 import ij.WindowManager;
 import ij.gui.GenericDialog;
@@ -15,7 +16,14 @@ public class V5sToRoi extends ImagePlus implements PlugIn {
 		ImagePlus imp = WindowManager.getCurrentImage();
 		if (null == imp) return;
 		Virtual5DStack v5s = (Virtual5DStack) imp.getProperty("v5s");
-		if (v5s.getRoiSetNames().length == 0) return;
+		if (v5s == null){
+			IJ.error("This is not a v5s file...");
+			return;
+		}
+		if (v5s.getRoiSetNames().length == 0) {
+			IJ.error("This v5s file does not contain any ROI set...");
+			return;
+		}
 		RoiManager rm = RoiManager.getInstance2();
 		if (rm == null) rm = new RoiManager();
 		
