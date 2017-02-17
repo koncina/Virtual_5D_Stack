@@ -390,7 +390,7 @@ public class Virtual5DStack {
 	public void setElementsC(V5sElement[] subElements, int slice, int frame) {
 		if (slice < 1 || slice > getNSlices())
 			throw new IllegalArgumentException("slice out of range: " + slice);
-		if (frame < 1 || frame > getNSlices())
+		if (frame < 1 || frame > getNFrames())
 			throw new IllegalArgumentException("frame out of range: " + frame);
 		if (subElements.length != getNChannels())
 			throw new IllegalArgumentException("size of subElements is out of range: " + subElements.length);
