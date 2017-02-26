@@ -231,6 +231,7 @@ public class V5sReader {
 
 		for (int i = 0; i < fileList.size(); i++) {
 			for (int j = 0; j < dim[2]; j++) {
+				if (fileList.get(i) == null) continue;
 				v5s.setElement(fileList.get(i), new int[]{j + 1, 1, 1}, i * dimMax[2] + j + 1);
 			}
 		}
