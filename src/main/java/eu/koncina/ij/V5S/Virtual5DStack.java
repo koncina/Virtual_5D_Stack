@@ -620,7 +620,8 @@ public class Virtual5DStack {
 					if (checkSha1 && elements[i].sha1 != null) {
 						if (!Virtual5DStack.createSha1(elementFile).equals(elements[i].sha1)) IJ.log("warning: sha1 checksum changed for " + elementFile.getName());
 					} else if (checkSha1 && elements[i].sha1 == null) {
-						IJ.log("Warning: no sha1 checksum is stored in the v5s");
+						IJ.log("Warning: no sha1 checksum is stored in the v5s... storing current sha1");
+						elements[i].sha1 = createSha1(elementFile);
 					}
 					hideMsg.start();
 					r.setId(elementFile.getPath());
