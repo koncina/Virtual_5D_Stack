@@ -82,7 +82,7 @@ public class FlipV5s extends ImagePlus  implements PlugIn {
 				case Roi.FREEROI:
 					if (r instanceof EllipseRoi) {					
 						double[] rParams = ((EllipseRoi) r).getParams();
-						r2 = new OvalRoi(v5s.getWidth() - rParams[0], rParams[1], v5s.getWidth() - rParams[2], rParams[3]);
+						r2 = new EllipseRoi(v5s.getWidth() - rParams[0], rParams[1], v5s.getWidth() - rParams[2], rParams[3], rParams[4]);
 					} else {
 						FloatPolygon rPol = r.getFloatPolygon();
 						for (int j = 0; j < rPol.npoints; j++) {
