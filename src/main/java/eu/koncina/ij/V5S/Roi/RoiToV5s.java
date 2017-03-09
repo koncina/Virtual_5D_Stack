@@ -30,6 +30,7 @@ public class RoiToV5s extends ImagePlus implements PlugIn {
 			gd.addMessage("A ROI set with the same name already exists, would you like to overwrite it?");
 			gd.showDialog();
 			if (gd.wasCanceled()) return;
+			v5s.rmRoiSet(name);
 		}
 
 		for (int i = 0; i < roiSet.length; i++) {
