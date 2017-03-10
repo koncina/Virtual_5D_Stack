@@ -93,7 +93,6 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 		thumbOffsetY = (montage.getHeight() * 3) / (4 * gridY * 2);
 
 		Integer id = new Integer(imp.getID());
-		Integer idMontage = new Integer(montage.getID());
 		if (images.contains(id)) {
 			IJ.log("Already listening to this image");
 			return;
@@ -109,7 +108,6 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 			int tool = Toolbar.getInstance().addTool("Sort on montage - P4f7a1a4f0L404aFa164Fa664Fab64");
 			Toolbar.getInstance().setTool(tool);
 			images.addElement(id);
-			images.addElement(idMontage);
 		}
 	}
 
@@ -279,9 +277,10 @@ public class SortV5s implements PlugInFilter, MouseListener, MouseMotionListener
 	public void imageClosed(ImagePlus imp) {
 		if (imp.getID() == this.montage.getID()) {
 			ImagePlus.removeImageListener(this);
-			this.imp.setProperty("v5s", v5s);
+			images.removeElement(Integer.valueOf(this.imp.getID()));
 			this.imp.show();
 			this.imp.updateAndRepaintWindow();
+			this.imp.setProperty("v5s", v5s);
 			if (v5s.changes) {
 				V5sWriter v5sW  = new V5sWriter();
 				v5sW.v5sSaveDialog(v5s);
