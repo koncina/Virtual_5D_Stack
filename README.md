@@ -2,20 +2,26 @@
 
 ## Introduction
 
-[Hyperstacks](http://rsbweb.nih.gov/ij/docs/guide/146-8.html#sub:Hyperstacks-Intro) enable ImageJ to handle multidimensional images up to 5D images (*width* x *height* x *channels* x *slices* x *frames* *i.e.* xyczt). To avoid unnecessary duplication of raw files, this plugin enables the loading of multiple 3D files (*width* x *height* x *slices* x *channels*) as 5D hyperstacks.
-
-**Important note:** This plugin loads the complete stack of pictures into memory (while the notion of [virtual stack in Fiji/ImageJ](http://rsbweb.nih.gov/ij/docs/guide/146-8.html#sub:Virtual-Stacks) is referring to the on the fly loading of images to reduce memory load).
+[Hyperstacks](http://rsbweb.nih.gov/ij/docs/guide/146-8.html#sub:Hyperstacks-Intro) enable ImageJ to handle multidimensional images up to 5D images (*width* x *height* x *channels* x *slices* x *frames* *i.e.* xyczt). To avoid unnecessary duplication of raw files, this plugin allows to load multiple 3D files (*width* x *height* x *slices* x *channels*) as 5D hyperstacks.
 
 ## Usage
 
-The plugin expects a `.v5s` file which is a text file containing *t* lines (the number of frames).    
-Each line should contain an equal sized list of semi-columns (`;`) separated filenames which will be loaded as different slices (*z* dimension). To balance the list size, a missing file can be specified by the keyword `empty` which will produce a black spacer image.  
+### Create new Virtual 5D Stack
 
-An example of a `.v5s` file could look like:
+Create a new stack using the `File > New > Virtual 5D Stack` command. Select by which dimension you would like to load the image files (`t` or `z`) and fill in the appropriate size. For each `t` (or `z`) level, load the images to populate the remaining dimension.
 
-```
-A01.lsm;A02.lsm;A03.lsm;A04.lsm;A05.lsm
-B01.lsm;B02.lsm;B03.lsm;empty;B05.lsm
-```
+The plugin:
+- Increases the canvas size to the maximum image size in the set.
+- Populates missing images as black empty images labelled `missing`.
 
-where `A` and `B` represent two different levels of the dimension *t* and the numbers `01` to `05`, five different levels of the dimension *z*.
+### Sort Virtual 5D Stacks
+
+When loading a `Virtual 5D Stack`, you might want to sort the images along the `z` dimension. Use the `Plugins > Virtual 5D Stack > Sort V5s` to create a montage and drag and drop the images to swap their position. You can also drag an image outside the canvas (left or right side) to increase the dimension. To remove a specific `z` level, drag an image outside the canvas (top or bottom side). A dialog window is shown in order to confirm the suppression of the level (no dialog is shown if the level is empty, _i.e._ contains only `missing` images).
+
+### Save the Virtual 5D Stack
+
+Use the command `File > Save as > Virtual 5D Stack ...` to save the `v5s` file. A `v5s` is a xml file containing the informations to reload the 5D hyperstack as it is displayed from the individual raw images.
+
+### ROI
+
+It is possible to store regions of interest (ROI) directly in a `v5s` file `Plugins > Virtual 5D Stack > ROI > Store ROI`. The plugin will ask to attribute a name to the ROI set. Actually, it is only possible to store a single ROI for each slice. To reload a ROI, use the command `Plugins > Virtual 5D Stack > ROI > Load ROI`. The advantage of storing ROIs in a `v5s` file is to keep the ROI in sync when using the `Sort V5s` plugin.
